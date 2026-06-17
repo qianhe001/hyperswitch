@@ -1,0 +1,38 @@
+{
+    "amount": 10,
+    "appId": "10000",
+    "clientId": "",
+    "currency": "HKD",
+    "descriptor": "付款",
+    "merchantMemo": "1111113131",
+    "merchantOrderId": "cae333e3r6333333e3r5381",
+    "requestId": "cae263538333133r3333r3re",
+    "validityPeriod": 7200,
+    "orderTime": "2023-11-23T15:38:11+0800",
+    "checkoutSessionUrl":"https://acquire.uprimer.com/sessions/eyJTRVNTSU9OX0lEIjoiY2MyODQ0NzMtMjcwYS00MzJhLTg0NmMtZWNkZTY5ZWFhOWU3IiwiQ0hFQ0tPVVRfSUQiOiIyYTc5YmFlMS1lYzA2LTRjZWMtODg2ZC0yOGQ3NTY3OTBmNmEifQ==",
+    "products": [
+        {
+            "code": "101110",
+            "name": "iphone",
+            "quantity": 1,
+            "sku": "black",
+            "unitPrice": 6000
+        }
+    ],
+    "cancelUrl": "https://hfgj.testpnr.com/crossDemo/webHook.do",
+    "notificationUrl": "https://hfgj.testpnr.com/crossDemo/webHook.do",
+    "successUrl": "https://hfgj.testpnr.com/crossDemo/webHook.do",
+    "failureUrl": "https://hfgj.testpnr.com/crossDemo/webHook.do",
+    "shipping": {
+        "city": "city",
+        "company": "shipping company",
+        "countryCode": "US",
+        "firstName": "lucy",
+        "lastName": "king",
+        "phoneNumber": "13388888888",
+        "postCode": "12345-1233",
+        "state": "CA",
+        "street": "st1e",
+        "street2": "st2e"
+    }
+}

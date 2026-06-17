@@ -1,0 +1,944 @@
+{
+	"info": {
+		"_postman_id": "e42e64ed-a5c4-4e93-bcb1-dfe1063ff5ef",
+		"name": "汇付外卡收单UAT",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1-授权接口",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var responseBody = JSON.parse(responseBody);",
+							"if(responseBody.code == \"00000000\"){",
+							"    console.log(responseBody.data.token);",
+							"    pm.globals.set(\"access_token\",responseBody.data.token);",
+							"    pm.variables.set(\"secret_key_prod\",pm.request.headers.get(\"X-SecretKey\"))",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-AccessCode",
+						"value": "998822e76540cff183b5d9e3172a311f",
+						"type": "text"
+					},
+					{
+						"key": "X-SecretKey",
+						"value": "fr7zlr7enm8nbc68mgv4zcdbaw1ci4o8hjpd8w656d9opzj6tf7du01vb2l7cz0acp4gsrpuu39arw0vmzgqv9mctwllkjvder14orsl72czetc295ue3ix0oddzaajeap4gstpz3e9rjun18nsphr0a746zmxurw16fc4aqjrhuq4l2gk2adk8sj3shdv3mvt5ose0i8uq67kbo1jxgbdt9ynw5nncs3k881jl7oihs5dc1fput3tvp4djw5m4bac9velhis5xv4hbjd4hwm2o5927akerxpk5t8aj2gwv6hnysuv35slw5q7ekomr72xob3ry7h6hbcegn8sxz5ps6rebdo2o1n8d1cr2pk6xlfdoldkv5r4flc289smu04jxlqevf9iuqksscq7ut06yq4ztidfucx5p6r986ls5s12tcrhcwcz7rcexwl3rkwsto9vc69c2oeh8ca1fx0wtk9cos4f5gvlfmpjjyla93lv6an9tnj0v45m2mdx15",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "https://uatacquire.cloudpnr.com/authorize",
+					"protocol": "https",
+					"host": [
+						"uatacquire",
+						"cloudpnr",
+						"com"
+					],
+					"path": [
+						"authorize"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2.1-卡跳转收银台",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"var data2 = moment().format(\"YYYYMMDDHHmmssSSS\");",
+							"pm.variables.set(\"mer_order_id\", data2);",
+							"",
+							"var data3 = moment().format(\"yyyy-MM-DDTHH:mm:ssZ\");",
+							"index1 = data3.lastIndexOf(\":\")",
+							"data4 = \"\\\"\" + data3.substring(0,index1) + data3.substring(index1 + 1) + \"\\\"\"",
+							"console.log(\"orderTime：\" + data4);",
+							"pm.variables.set(\"orderTime\", data4);",
+							"",
+							"var secret_key_uat1 = \"fr7zlr7enm8nbc68mgv4zcdbaw1ci4o8hjpd8w656d9opzj6tf7du01vb2l7cz0acp4gsrpuu39arw0vmzgqv9mctwllkjvder14orsl72czetc295ue3ix0oddzaajeap4gstpz3e9rjun18nsphr0a746zmxurw16fc4aqjrhuq4l2gk2adk8sj3shdv3mvt5ose0i8uq67kbo1jxgbdt9ynw5nncs3k881jl7oihs5dc1fput3tvp4djw5m4bac9velhis5xv4hbjd4hwm2o5927akerxpk5t8aj2gwv6hnysuv35slw5q7ekomr72xob3ry7h6hbcegn8sxz5ps6rebdo2o1n8d1cr2pk6xlfdoldkv5r4flc289smu04jxlqevf9iuqksscq7ut06yq4ztidfucx5p6r986ls5s12tcrhcwcz7rcexwl3rkwsto9vc69c2oeh8ca1fx0wtk9cos4f5gvlfmpjjyla93lv6an9tnj0v45m2mdx15\";",
+							"",
+							"var requestBody = pm.variables.replaceIn(pm.request.body.raw);",
+							"console.log(\"请求体:\"+requestBody);",
+							"var signMsg = CryptoJS.MD5(requestBody+secret_key_uat1).toString();",
+							"pm.request.headers.upsert({key: \"X-Signature\", value: signMsg});"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-AccessCode",
+						"value": "998822e76540cff183b5d9e3172a311f",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"amount\": 19900,\n    \"currency\": \"HKD\",\n    \"appId\": \"10000\",\n    \"merchantOrderId\": {{mer_order_id}},\n    \"requestId\": {{mer_order_id}},\n    \"validityPeriod\": 500,\n    \"orderTime\": {{orderTime}},\n    \"paymentMethod\": {\n        \"methodType\": \"CARD\"\n    },\n    \"shipping\": {\n        \"city\": \"Toronto\",\n        \"countryCode\": \"CA\",\n        \"firstName\": \"XINGGUO\",\n        \"lastName\": \"XU\",\n        \"phoneNumber\": \"+8618672362337\",\n        \"postCode\": \"M5G 1V7\",\n        \"state\": \"ON\",\n        \"street\": \"160-500 University\",\n        \"street2\": \"\"\n    },\n    \"products\": [\n        {\n            \"code\": \"4098755\",\n            \"name\": \"High-Collar Boxy Camel Hair Blend Sweater,MUMUXI LED Fairy Lights Battery Operated String Lights [12 Pack] 7.2ft 20 Battery Powered LED Lights | Mini Lights, Centerpiece Table Decorations, Wedding Party Bedroom Mason Jar Christmas, Warm White\",\n            \"quantity\": 1,\n            \"sku\": \"4098755 black\",\n            \"unitPrice\": 100\n        }\n    ],\n    \"cancelUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"notificationUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"successUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"failureUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://uatacquire.cloudpnr.com/api/acquire/checkout/create",
+					"protocol": "https",
+					"host": [
+						"uatacquire",
+						"cloudpnr",
+						"com"
+					],
+					"path": [
+						"api",
+						"acquire",
+						"checkout",
+						"create"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2.2-卡直连支付-No3D",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"var data2 = moment().format(\"YYYYMMDDHHmmssSSS\");",
+							"pm.variables.set(\"mer_order_id\", data2);",
+							"",
+							"var data3 = moment().format(\"yyyy-MM-DDTHH:mm:ssZ\");",
+							"index1 = data3.lastIndexOf(\":\")",
+							"data4 = \"\\\"\" + data3.substring(0,index1) + data3.substring(index1 + 1) + \"\\\"\"",
+							"console.log(\"orderTime：\" + data4);",
+							"pm.variables.set(\"orderTime\", data4);",
+							"",
+							"var secret_key_uat = \"fr7zlr7enm8nbc68mgv4zcdbaw1ci4o8hjpd8w656d9opzj6tf7du01vb2l7cz0acp4gsrpuu39arw0vmzgqv9mctwllkjvder14orsl72czetc295ue3ix0oddzaajeap4gstpz3e9rjun18nsphr0a746zmxurw16fc4aqjrhuq4l2gk2adk8sj3shdv3mvt5ose0i8uq67kbo1jxgbdt9ynw5nncs3k881jl7oihs5dc1fput3tvp4djw5m4bac9velhis5xv4hbjd4hwm2o5927akerxpk5t8aj2gwv6hnysuv35slw5q7ekomr72xob3ry7h6hbcegn8sxz5ps6rebdo2o1n8d1cr2pk6xlfdoldkv5r4flc289smu04jxlqevf9iuqksscq7ut06yq4ztidfucx5p6r986ls5s12tcrhcwcz7rcexwl3rkwsto9vc69c2oeh8ca1fx0wtk9cos4f5gvlfmpjjyla93lv6an9tnj0v45m2mdx15\";",
+							"",
+							"var requestBody = pm.variables.replaceIn(pm.request.body.raw);",
+							"console.log(\"请求体:\"+requestBody);",
+							"var signMsg = CryptoJS.MD5(requestBody+secret_key_uat).toString();",
+							"pm.request.headers.upsert({key: \"X-Signature\", value: signMsg});"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-AccessCode",
+						"value": "998822e76540cff183b5d9e3172a311f",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"amount\": 89900,\n    \"appId\": \"10000\",\n    \"currency\": \"USD\",\n    \"descriptor\": \"付款\",\n    \"merchantOrderId\": {{mer_order_id}},\n    \"requestId\": {{mer_order_id}},\n    \"cancelUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"successUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"failureUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"notificationUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"orderTime\": {{orderTime}},\n    \"paymentMethod\": {\n        \"methodType\": \"CARD\",\n        \"card\": {\n            \"cvv\": \"133\",\n            \"expiryMonth\": \"10\",\n            \"expiryYear\": \"26\",\n            \"firstName\": \"xingguo\",\n            \"lastName\": \"xu\",\n            \"number\": \"4111111111111111\",\n            \"billing\":{\n                \"firstName\": \"xingguo\",\n                \"lastName\": \"xu\",\n                \"dateOfBirth\":\"\",\n                \"phoneNumber\":\"11144442121\",\n                \"email\": \"xu.xg@qq.com\",\n                \"countryCode\": \"GB\",\n                \"state\": \"UK\",\n                \"city\": \"Toronto\",\n                \"street\": \"160-500 University\",\n                \"postCode\": \"12345-1233\"\n            }\n        }\n    },\n    \"products\": [\n        {\n            \"code\": \"101110\",\n            \"name\": \"iphone\",\n            \"quantity\": 1,\n            \"sku\": \"black\",\n            \"unitPrice\": 6000,\n            \"totalAmount\": 6000\n        }\n    ],\n    \"shipping\": {\n        \"company\": \"shipping company\",\n        \"firstName\": \"lucy\",\n        \"lastName\": \"king\",\n        \"phoneNumber\": \"13388888888\",\n        \"countryCode\": \"GB\",\n        \"state\": \"UK\",\n        \"city\": \"Toronto\",\n        \"street\": \"160-500 University\",\n        \"street2\": \"st2\",\n        \"postCode\": \"Box1026\"\n    },\n    \"deviceData\": {\n        \"acceptHeader\": \"text/html\",\n        \"browserJavaEnabled\": \"true\",\n        \"browserJavascriptEnabled\": \"true\",\n        \"browserUserAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.183\",\n        \"challengeWindow\": \"5\",\n        \"language\": \"zh-CN\",\n        \"screenColorDepth\": \"48\",\n        \"screenHeight\": \"1200\",\n        \"screenWidth\": \"1600\",\n        \"timezone\": \"60\"\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://uatacquire.cloudpnr.com/api/acquire/payment/create",
+					"protocol": "https",
+					"host": [
+						"uatacquire",
+						"cloudpnr",
+						"com"
+					],
+					"path": [
+						"api",
+						"acquire",
+						"payment",
+						"create"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2.3-卡直连支付-3D无摩擦",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"var data2 = moment().format(\"YYYYMMDDHHmmssSSS\");",
+							"pm.variables.set(\"mer_order_id\", data2);",
+							"",
+							"var data3 = moment().format(\"yyyy-MM-DDTHH:mm:ssZ\");",
+							"index1 = data3.lastIndexOf(\":\")",
+							"data4 = \"\\\"\" + data3.substring(0,index1) + data3.substring(index1 + 1) + \"\\\"\"",
+							"console.log(\"orderTime：\" + data4);",
+							"pm.variables.set(\"orderTime\", data4);",
+							"",
+							"var secret_key_uat = \"fr7zlr7enm8nbc68mgv4zcdbaw1ci4o8hjpd8w656d9opzj6tf7du01vb2l7cz0acp4gsrpuu39arw0vmzgqv9mctwllkjvder14orsl72czetc295ue3ix0oddzaajeap4gstpz3e9rjun18nsphr0a746zmxurw16fc4aqjrhuq4l2gk2adk8sj3shdv3mvt5ose0i8uq67kbo1jxgbdt9ynw5nncs3k881jl7oihs5dc1fput3tvp4djw5m4bac9velhis5xv4hbjd4hwm2o5927akerxpk5t8aj2gwv6hnysuv35slw5q7ekomr72xob3ry7h6hbcegn8sxz5ps6rebdo2o1n8d1cr2pk6xlfdoldkv5r4flc289smu04jxlqevf9iuqksscq7ut06yq4ztidfucx5p6r986ls5s12tcrhcwcz7rcexwl3rkwsto9vc69c2oeh8ca1fx0wtk9cos4f5gvlfmpjjyla93lv6an9tnj0v45m2mdx15\";",
+							"",
+							"var requestBody = pm.variables.replaceIn(pm.request.body.raw);",
+							"console.log(\"请求体:\"+requestBody);",
+							"var signMsg = CryptoJS.MD5(requestBody+secret_key_uat).toString();",
+							"pm.request.headers.upsert({key: \"X-Signature\", value: signMsg});"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-AccessCode",
+						"type": "text",
+						"value": "998822e76540cff183b5d9e3172a311f"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"amount\": 89900,\n    \"appId\": \"10000\",\n    \"currency\": \"HKD\",\n    \"descriptor\": \"付款\",\n    \"merchantOrderId\": {{mer_order_id}},\n    \"requestId\": {{mer_order_id}},\n    \"cancelUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"successUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"failureUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"notificationUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"orderTime\": {{orderTime}},\n    \"paymentMethod\": {\n        \"methodType\": \"CARD\",\n        \"card\": {\n            \"cvv\": \"133\",\n            \"expiryMonth\": \"10\",\n            \"expiryYear\": \"26\",\n            \"firstName\": \"xingguo\",\n            \"lastName\": \"xu\",\n            \"number\": \"5200000000002235\",\n            \"billing\":{\n                \"firstName\": \"xingguo\",\n                \"lastName\": \"xu\",\n                \"dateOfBirth\":\"\",\n                \"phoneNumber\":\"11144442121\",\n                \"email\": \"xu.xg@qq.com\",\n                \"countryCode\": \"GB\",\n                \"state\": \"UK\",\n                \"city\": \"Toronto\",\n                \"street\": \"160-500 University\",\n                \"postCode\": \"12345-1233\"\n            }\n        }\n    },\n    \"products\": [\n        {\n            \"code\": \"101110\",\n            \"name\": \"iphone\",\n            \"quantity\": 1,\n            \"sku\": \"black\",\n            \"unitPrice\": 6000,\n            \"totalAmount\": 6000\n        }\n    ],\n    \"shipping\": {\n        \"company\": \"shipping company\",\n        \"firstName\": \"lucy\",\n        \"lastName\": \"king\",\n        \"phoneNumber\": \"13388888888\",\n        \"countryCode\": \"GB\",\n        \"state\": \"UK\",\n        \"city\": \"Toronto\",\n        \"street\": \"160-500 University\",\n        \"street2\": \"st2\",\n        \"postCode\": \"Box1026\"\n    },\n    \"deviceData\": {\n        \"acceptHeader\": \"text/html\",\n        \"browserJavaEnabled\": \"true\",\n        \"browserJavascriptEnabled\": \"true\",\n        \"browserUserAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.183\",\n        \"challengeWindow\": \"5\",\n        \"language\": \"zh-CN\",\n        \"screenColorDepth\": \"48\",\n        \"screenHeight\": \"1200\",\n        \"screenWidth\": \"1600\",\n        \"timezone\": \"60\"\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://uatacquire.cloudpnr.com/api/acquire/payment/create",
+					"protocol": "https",
+					"host": [
+						"uatacquire",
+						"cloudpnr",
+						"com"
+					],
+					"path": [
+						"api",
+						"acquire",
+						"payment",
+						"create"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2.4-卡直连支付-3D有摩擦",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"var data2 = moment().format(\"YYYYMMDDHHmmssSSS\");",
+							"pm.variables.set(\"mer_order_id\", data2);",
+							"",
+							"var data3 = moment().format(\"yyyy-MM-DDTHH:mm:ssZ\");",
+							"index1 = data3.lastIndexOf(\":\")",
+							"data4 = \"\\\"\" + data3.substring(0,index1) + data3.substring(index1 + 1) + \"\\\"\"",
+							"console.log(\"orderTime：\" + data4);",
+							"pm.variables.set(\"orderTime\", data4);",
+							"",
+							"var secret_key_uat = \"fr7zlr7enm8nbc68mgv4zcdbaw1ci4o8hjpd8w656d9opzj6tf7du01vb2l7cz0acp4gsrpuu39arw0vmzgqv9mctwllkjvder14orsl72czetc295ue3ix0oddzaajeap4gstpz3e9rjun18nsphr0a746zmxurw16fc4aqjrhuq4l2gk2adk8sj3shdv3mvt5ose0i8uq67kbo1jxgbdt9ynw5nncs3k881jl7oihs5dc1fput3tvp4djw5m4bac9velhis5xv4hbjd4hwm2o5927akerxpk5t8aj2gwv6hnysuv35slw5q7ekomr72xob3ry7h6hbcegn8sxz5ps6rebdo2o1n8d1cr2pk6xlfdoldkv5r4flc289smu04jxlqevf9iuqksscq7ut06yq4ztidfucx5p6r986ls5s12tcrhcwcz7rcexwl3rkwsto9vc69c2oeh8ca1fx0wtk9cos4f5gvlfmpjjyla93lv6an9tnj0v45m2mdx15\";",
+							"",
+							"var requestBody = pm.variables.replaceIn(pm.request.body.raw);",
+							"console.log(\"请求体:\"+requestBody);",
+							"var signMsg = CryptoJS.MD5(requestBody+secret_key_uat).toString();",
+							"pm.request.headers.upsert({key: \"X-Signature\", value: signMsg});"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-AccessCode",
+						"type": "text",
+						"value": "998822e76540cff183b5d9e3172a311f"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"amount\": 89900,\n    \"appId\": \"10000\",\n    \"currency\": \"HKD\",\n    \"descriptor\": \"付款\",\n    \"merchantOrderId\": {{mer_order_id}},\n    \"requestId\": {{mer_order_id}},\n    \"cancelUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"successUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"failureUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"notificationUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"orderTime\": {{orderTime}},\n    \"paymentMethod\": {\n        \"methodType\": \"CARD\",\n        \"card\": {\n            \"cvv\": \"133\",\n            \"expiryMonth\": \"10\",\n            \"expiryYear\": \"26\",\n            \"firstName\": \"xingguo\",\n            \"lastName\": \"xu\",\n            \"number\": \"5200000000001096\",\n            \"billing\":{\n                \"firstName\": \"xingguo\",\n                \"lastName\": \"xu\",\n                \"dateOfBirth\":\"\",\n                \"phoneNumber\":\"11144442121\",\n                \"email\": \"xu.xg@qq.com\",\n                \"countryCode\": \"GB\",\n                \"state\": \"UK\",\n                \"city\": \"Toronto\",\n                \"street\": \"160-500 University\",\n                \"postCode\": \"12345-1233\"\n            }\n        }\n    },\n    \"products\": [\n        {\n            \"code\": \"101110\",\n            \"name\": \"iphone\",\n            \"quantity\": 1,\n            \"sku\": \"black\",\n            \"unitPrice\": 6000,\n            \"totalAmount\": 6000\n        }\n    ],\n    \"shipping\": {\n        \"company\": \"shipping company\",\n        \"firstName\": \"lucy\",\n        \"lastName\": \"king\",\n        \"phoneNumber\": \"13388888888\",\n        \"countryCode\": \"GB\",\n        \"state\": \"UK\",\n        \"city\": \"Toronto\",\n        \"street\": \"160-500 University\",\n        \"street2\": \"st2\",\n        \"postCode\": \"Box1026\"\n    },\n    \"deviceData\": {\n        \"acceptHeader\": \"text/html\",\n        \"browserJavaEnabled\": \"true\",\n        \"browserJavascriptEnabled\": \"true\",\n        \"browserUserAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.183\",\n        \"challengeWindow\": \"5\",\n        \"language\": \"zh-CN\",\n        \"screenColorDepth\": \"48\",\n        \"screenHeight\": \"1200\",\n        \"screenWidth\": \"1600\",\n        \"timezone\": \"60\"\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://uatacquire.cloudpnr.com/api/acquire/payment/create",
+					"protocol": "https",
+					"host": [
+						"uatacquire",
+						"cloudpnr",
+						"com"
+					],
+					"path": [
+						"api",
+						"acquire",
+						"payment",
+						"create"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2-交易退款",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"var data2 = moment().format(\"YYYYMMDDHHmmssSSS\");",
+							"pm.variables.set(\"mer_order_id\", data2);",
+							"",
+							"var data3 = moment().format(\"yyyy-MM-DDTHH:mm:ssZ\");",
+							"index1 = data3.lastIndexOf(\":\")",
+							"data4 = \"\\\"\" + data3.substring(0,index1) + data3.substring(index1 + 1) + \"\\\"\"",
+							"console.log(\"refundTime\" + data4);",
+							"pm.variables.set(\"refundTime\", data4);",
+							"",
+							"var secret_key_uat = \"b25jwmfpg7o7tvtxzpjixz7pft0crmmh6pb9alholoxf86o93p2qdzghv31jxlivbg3vpevlj0j68if1kutwbq05aewwtwxj99yqni637k7z61gdv2g66qm8xv2bay2z99tc55spvihrp3j7dx4v569yff569dpur799wmwajuhhhtthei4cy4cykqmm07a734917cxeek6xgy2o7kgmiic0wy3mxeuahzyk2dweekh9892ik45c1zqojoi9tbxahsv9gbi7ahpphf153fiaua31c6is38q8vd64b7lcxyk1p9k22l9n7cy5he78mfbgz3qr166zv0g82le4nldk1vlpkj0dkoawnr1012lkymy378q63jqc385v04e2pv8hvj5nssxopgkgpkg6agdcboydzftbwv1nuzal81mb45n69eq67ofg46ievyxfz3svenrcy5sfwu00a59muqv3goy8a5n0e0lthrhqltfyuaio3f6ixq925qtgi8w8v6cf\";",
+							"",
+							"var requestBody = pm.variables.replaceIn(pm.request.body.raw);",
+							"console.log(\"请求体:\"+requestBody);",
+							"var signMsg = CryptoJS.MD5(requestBody+secret_key_uat).toString();",
+							"pm.request.headers.upsert({key: \"X-Signature\", value: signMsg});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-AccessCode",
+						"value": "998822e76540cff183b5d9e3172a311f",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"requestId\": {{mer_order_id}},\n    \"appId\": \"10000\",\n    \"merchantOrderId\": {{mer_order_id}},\n    \"amount\": 89900,\n    \"currency\": \"USD\",\n    \"refundReason\": \"不想要了\",\n    \"refundTime\": {{refundTime}},\n    \"notificationUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://uatacquire.cloudpnr.com/api/acquire/payment/1020241015000031/refund",
+					"protocol": "https",
+					"host": [
+						"uatacquire",
+						"cloudpnr",
+						"com"
+					],
+					"path": [
+						"api",
+						"acquire",
+						"payment",
+						"1020241015000031",
+						"refund"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3-交易查询",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-AccessCode",
+						"type": "text",
+						"value": "998822e76540cff183b5d9e3172a311f"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://uatacquire.cloudpnr.com/api/acquire/payment/1020241015000031/get",
+					"protocol": "https",
+					"host": [
+						"uatacquire",
+						"cloudpnr",
+						"com"
+					],
+					"path": [
+						"api",
+						"acquire",
+						"payment",
+						"1020241015000031",
+						"get"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "4-模拟交易通知",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"var data2 = moment().format(\"YYYYMMDDHHmmssSSS\");",
+							"pm.variables.set(\"mer_order_id\", data2);",
+							"",
+							"var data3 = moment().format(\"yyyy-MM-DDTHH:mm:ssZ\");",
+							"index1 = data3.lastIndexOf(\":\")",
+							"data4 = \"\\\"\" + data3.substring(0,index1) + data3.substring(index1 + 1) + \"\\\"\"",
+							"console.log(\"createTime\" + data4);",
+							"pm.variables.set(\"createTime\", data4);",
+							"",
+							"var secret_key_uat = \"fr7zlr7enm8nbc68mgv4zcdbaw1ci4o8hjpd8w656d9opzj6tf7du01vb2l7cz0acp4gsrpuu39arw0vmzgqv9mctwllkjvder14orsl72czetc295ue3ix0oddzaajeap4gstpz3e9rjun18nsphr0a746zmxurw16fc4aqjrhuq4l2gk2adk8sj3shdv3mvt5ose0i8uq67kbo1jxgbdt9ynw5nncs3k881jl7oihs5dc1fput3tvp4djw5m4bac9velhis5xv4hbjd4hwm2o5927akerxpk5t8aj2gwv6hnysuv35slw5q7ekomr72xob3ry7h6hbcegn8sxz5ps6rebdo2o1n8d1cr2pk6xlfdoldkv5r4flc289smu04jxlqevf9iuqksscq7ut06yq4ztidfucx5p6r986ls5s12tcrhcwcz7rcexwl3rkwsto9vc69c2oeh8ca1fx0wtk9cos4f5gvlfmpjjyla93lv6an9tnj0v45m2mdx15\";",
+							"",
+							"var requestBody = pm.variables.replaceIn(pm.request.body.raw);",
+							"console.log(\"签名串:\" + requestBody+secret_key_uat);",
+							"var signMsg = CryptoJS.MD5(requestBody+secret_key_uat).toString();",
+							"pm.request.headers.upsert({key: \"X-Signature\", value: signMsg});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-AccessCode",
+						"type": "text",
+						"value": "998822e76540cff183b5d9e3172a311f"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n        \"requestId\": \"20241015194357286\",\n        \"appId\": \"10000\",\n        \"merchantOrderId\": {{mer_order_id}},\n        \"amount\": 89900,\n        \"currency\": \"USD\",\n        \"id\": \"1020241015000031\",\n        \"transactionType\": \"SALE\",\n        \"status\": \"SUCCEED\",\n        \"errorCode\": \"00000000\",\n        \"createTime\": {{createTime}},\n        \"updateTime\": {{createTime}},\n        \"authCode\": \"106030\",\n        \"threeDS\": \"\"\n    }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8081/notify/receive",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"notify",
+						"receive"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "5.1-PIX直连交易创建",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"var data2 = moment().format(\"YYYYMMDDHHmmssSSS\");",
+							"pm.variables.set(\"mer_order_id\", data2);",
+							"",
+							"var data3 = moment().format(\"yyyy-MM-DDTHH:mm:ssZ\");",
+							"index1 = data3.lastIndexOf(\":\")",
+							"data4 = \"\\\"\" + data3.substring(0,index1) + data3.substring(index1 + 1) + \"\\\"\"",
+							"console.log(\"orderTime：\" + data4);",
+							"pm.variables.set(\"orderTime\", data4);",
+							"",
+							"var secret_key_uat = \"fr7zlr7enm8nbc68mgv4zcdbaw1ci4o8hjpd8w656d9opzj6tf7du01vb2l7cz0acp4gsrpuu39arw0vmzgqv9mctwllkjvder14orsl72czetc295ue3ix0oddzaajeap4gstpz3e9rjun18nsphr0a746zmxurw16fc4aqjrhuq4l2gk2adk8sj3shdv3mvt5ose0i8uq67kbo1jxgbdt9ynw5nncs3k881jl7oihs5dc1fput3tvp4djw5m4bac9velhis5xv4hbjd4hwm2o5927akerxpk5t8aj2gwv6hnysuv35slw5q7ekomr72xob3ry7h6hbcegn8sxz5ps6rebdo2o1n8d1cr2pk6xlfdoldkv5r4flc289smu04jxlqevf9iuqksscq7ut06yq4ztidfucx5p6r986ls5s12tcrhcwcz7rcexwl3rkwsto9vc69c2oeh8ca1fx0wtk9cos4f5gvlfmpjjyla93lv6an9tnj0v45m2mdx15\";",
+							"",
+							"var requestBody = pm.variables.replaceIn(pm.request.body.raw);",
+							"console.log(\"请求体:\"+requestBody);",
+							"var signMsg = CryptoJS.MD5(requestBody+secret_key_uat).toString();",
+							"pm.request.headers.upsert({key: \"X-Signature\", value: signMsg});"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-AccessCode",
+						"value": "998822e76540cff183b5d9e3172a311f",
+						"type": "text"
+					},
+					{
+						"key": "X-ClientId",
+						"value": "CEHK005147",
+						"type": "text"
+					},
+					{
+						"key": "secret_key",
+						"value": "fr7zlr7enm8nbc68mgv4zcdbaw1ci4o8hjpd8w656d9opzj6tf7du01vb2l7cz0acp4gsrpuu39arw0vmzgqv9mctwllkjvder14orsl72czetc295ue3ix0oddzaajeap4gstpz3e9rjun18nsphr0a746zmxurw16fc4aqjrhuq4l2gk2adk8sj3shdv3mvt5ose0i8uq67kbo1jxgbdt9ynw5nncs3k881jl7oihs5dc1fput3tvp4djw5m4bac9velhis5xv4hbjd4hwm2o5927akerxpk5t8aj2gwv6hnysuv35slw5q7ekomr72xob3ry7h6hbcegn8sxz5ps6rebdo2o1n8d1cr2pk6xlfdoldkv5r4flc289smu04jxlqevf9iuqksscq7ut06yq4ztidfucx5p6r986ls5s12tcrhcwcz7rcexwl3rkwsto9vc69c2oeh8ca1fx0wtk9cos4f5gvlfmpjjyla93lv6an9tnj0v45m2mdx15",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"amount\": 11001,\n    \"appId\": \"10000\",\n    \"currency\": \"BRL\",\n    \"descriptor\": \"付款\",\n    \"validityPeriod\":\"72000\",\n    \"merchantOrderId\": {{mer_order_id}},\n    \"requestId\": {{mer_order_id}},\n    \"cancelUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"successUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"failureUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"notificationUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"orderTime\": {{orderTime}},\n    \"paymentMethod\": {\n        \"methodType\": \"PIX\"\n    },\n    \"customer\":{\n      \"legalEntityType\":\"INDIVIDUAL\",\n      \"merchantCustomerId\":\"\",\n      \"firstName\":\"lucy\",\n      \"lastName\":\"king\",\n      \"email\":\"123@huifu.com\",\n      \"nationalId\":\"422.922.851-18\"\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://uatacquire.cloudpnr.com/api/acquire/payment/create",
+					"protocol": "https",
+					"host": [
+						"uatacquire",
+						"cloudpnr",
+						"com"
+					],
+					"path": [
+						"api",
+						"acquire",
+						"payment",
+						"create"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "5.2-Boleto直连交易创建",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"var data2 = moment().format(\"YYYYMMDDHHmmssSSS\");",
+							"pm.variables.set(\"mer_order_id\", data2);",
+							"",
+							"var data3 = moment().format(\"yyyy-MM-DDTHH:mm:ssZ\");",
+							"index1 = data3.lastIndexOf(\":\")",
+							"data4 = \"\\\"\" + data3.substring(0,index1) + data3.substring(index1 + 1) + \"\\\"\"",
+							"console.log(\"orderTime：\" + data4);",
+							"pm.variables.set(\"orderTime\", data4);",
+							"",
+							"var secret_key_uat = \"fr7zlr7enm8nbc68mgv4zcdbaw1ci4o8hjpd8w656d9opzj6tf7du01vb2l7cz0acp4gsrpuu39arw0vmzgqv9mctwllkjvder14orsl72czetc295ue3ix0oddzaajeap4gstpz3e9rjun18nsphr0a746zmxurw16fc4aqjrhuq4l2gk2adk8sj3shdv3mvt5ose0i8uq67kbo1jxgbdt9ynw5nncs3k881jl7oihs5dc1fput3tvp4djw5m4bac9velhis5xv4hbjd4hwm2o5927akerxpk5t8aj2gwv6hnysuv35slw5q7ekomr72xob3ry7h6hbcegn8sxz5ps6rebdo2o1n8d1cr2pk6xlfdoldkv5r4flc289smu04jxlqevf9iuqksscq7ut06yq4ztidfucx5p6r986ls5s12tcrhcwcz7rcexwl3rkwsto9vc69c2oeh8ca1fx0wtk9cos4f5gvlfmpjjyla93lv6an9tnj0v45m2mdx15\";",
+							"",
+							"var requestBody = pm.variables.replaceIn(pm.request.body.raw);",
+							"console.log(\"请求体:\"+requestBody);",
+							"var signMsg = CryptoJS.MD5(requestBody+secret_key_uat).toString();",
+							"pm.request.headers.upsert({key: \"X-Signature\", value: signMsg});"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-AccessCode",
+						"value": "998822e76540cff183b5d9e3172a311f",
+						"type": "text"
+					},
+					{
+						"key": "X-ClientId",
+						"value": "CEHK005147",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"amount\": 11000,\n    \"appId\": \"10000\",\n    \"currency\": \"BRL\",\n    \"descriptor\": \"付款\",\n    \"merchantOrderId\": {{mer_order_id}},\n    \"requestId\": {{mer_order_id}},\n    \"cancelUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"successUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"failureUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"notificationUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"orderTime\": \"2023-11-23T15:38:11+0800\",\n    \"paymentMethod\": {\n        \"methodType\": \"BOLETO\"\n    },\n    \"customer\":{\n      \"legalEntityType\":\"INDIVIDUAL\",\n      \"merchantCustomerId\":\"\",\n      \"firstName\":\"lucy\",\n      \"lastName\":\"king\",\n      \"email\":\"123@huifu.com\",\n      \"countryCode\":\"BR\",\n      \"state\":\"PA\",\n      \"city\":\"Toronto\",\n      \"street\":\"160-500 University\",\n      \"street2\":\"st2\",\n      \"postCode\":\"20000000\",\n      \"number\":\"1065\",\n      \"neighborhood\":\"lu jia zui jie dao\",\n      \"nationalId\":\"422.922.851-18\"\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://uatacquire.cloudpnr.com/api/acquire/payment/create",
+					"protocol": "https",
+					"host": [
+						"uatacquire",
+						"cloudpnr",
+						"com"
+					],
+					"path": [
+						"api",
+						"acquire",
+						"payment",
+						"create"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "6.1-嵌入式收银台创建session",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"var data2 = moment().format(\"YYYYMMDDHHmmssSSS\");",
+							"pm.variables.set(\"mer_order_id\", data2);",
+							"",
+							"var data3 = moment().format(\"yyyy-MM-DDTHH:mm:ssZ\");",
+							"index1 = data3.lastIndexOf(\":\")",
+							"data4 = \"\\\"\" + data3.substring(0,index1) + data3.substring(index1 + 1) + \"\\\"\"",
+							"console.log(\"orderTime：\" + data4);",
+							"pm.variables.set(\"orderTime\", data4);",
+							"",
+							"var secret_key_uat1 = \"fr7zlr7enm8nbc68mgv4zcdbaw1ci4o8hjpd8w656d9opzj6tf7du01vb2l7cz0acp4gsrpuu39arw0vmzgqv9mctwllkjvder14orsl72czetc295ue3ix0oddzaajeap4gstpz3e9rjun18nsphr0a746zmxurw16fc4aqjrhuq4l2gk2adk8sj3shdv3mvt5ose0i8uq67kbo1jxgbdt9ynw5nncs3k881jl7oihs5dc1fput3tvp4djw5m4bac9velhis5xv4hbjd4hwm2o5927akerxpk5t8aj2gwv6hnysuv35slw5q7ekomr72xob3ry7h6hbcegn8sxz5ps6rebdo2o1n8d1cr2pk6xlfdoldkv5r4flc289smu04jxlqevf9iuqksscq7ut06yq4ztidfucx5p6r986ls5s12tcrhcwcz7rcexwl3rkwsto9vc69c2oeh8ca1fx0wtk9cos4f5gvlfmpjjyla93lv6an9tnj0v45m2mdx15\";",
+							"",
+							"var requestBody = pm.variables.replaceIn(pm.request.body.raw);",
+							"console.log(\"请求体:\"+requestBody);",
+							"var signMsg = CryptoJS.MD5(requestBody+secret_key_uat1).toString();",
+							"pm.request.headers.upsert({key: \"X-Signature\", value: signMsg});"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-AccessCode",
+						"type": "text",
+						"value": "998822e76540cff183b5d9e3172a311f"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"traceId\":\"{{$guid}}\",\n\t\"checkoutId\":\"{{$guid}}\",\n\t\"checkoutType\":\"WEB\",\n\t\"paymentMethod\":{\n\t\t\"methodType\":\"CARD\",\n\t\t\"card\":{\n\t\t\t\"cvv\": \"133\",\n            \"expiryMonth\": \"10\",\n            \"expiryYear\": \"26\",\n            \"firstName\": \"xingguo\",\n            \"lastName\": \"xu\",\n            \"number\": \"5200000000001096\"\n\t\t}\n\t}\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://uatacquire.cloudpnr.com/api/sdkcheckout/session/create",
+					"protocol": "https",
+					"host": [
+						"uatacquire",
+						"cloudpnr",
+						"com"
+					],
+					"path": [
+						"api",
+						"sdkcheckout",
+						"session",
+						"create"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "6.2-嵌入式收银台交易创建",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require('moment');",
+							"var data2 = moment().format(\"YYYYMMDDHHmmssSSS\");",
+							"pm.variables.set(\"mer_order_id\", data2);",
+							"",
+							"var data3 = moment().format(\"yyyy-MM-DDTHH:mm:ssZ\");",
+							"index1 = data3.lastIndexOf(\":\")",
+							"data4 = \"\\\"\" + data3.substring(0,index1) + data3.substring(index1 + 1) + \"\\\"\"",
+							"console.log(\"orderTime：\" + data4);",
+							"pm.variables.set(\"orderTime\", data4);",
+							"",
+							"var secret_key_uat1 = \"fr7zlr7enm8nbc68mgv4zcdbaw1ci4o8hjpd8w656d9opzj6tf7du01vb2l7cz0acp4gsrpuu39arw0vmzgqv9mctwllkjvder14orsl72czetc295ue3ix0oddzaajeap4gstpz3e9rjun18nsphr0a746zmxurw16fc4aqjrhuq4l2gk2adk8sj3shdv3mvt5ose0i8uq67kbo1jxgbdt9ynw5nncs3k881jl7oihs5dc1fput3tvp4djw5m4bac9velhis5xv4hbjd4hwm2o5927akerxpk5t8aj2gwv6hnysuv35slw5q7ekomr72xob3ry7h6hbcegn8sxz5ps6rebdo2o1n8d1cr2pk6xlfdoldkv5r4flc289smu04jxlqevf9iuqksscq7ut06yq4ztidfucx5p6r986ls5s12tcrhcwcz7rcexwl3rkwsto9vc69c2oeh8ca1fx0wtk9cos4f5gvlfmpjjyla93lv6an9tnj0v45m2mdx15\";",
+							"",
+							"var requestBody = pm.variables.replaceIn(pm.request.body.raw);",
+							"console.log(\"请求体:\"+requestBody);",
+							"var signMsg = CryptoJS.MD5(requestBody+secret_key_uat1).toString();",
+							"pm.request.headers.upsert({key: \"X-Signature\", value: signMsg});"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-AccessCode",
+						"type": "text",
+						"value": "998822e76540cff183b5d9e3172a311f"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"notificationUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"amount\": 19900,\n    \"clientId\": \"\",\n    \"successUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"descriptor\": \"付款\",\n    \"merchantOrderId\": \"17361455300555\",\n    \"products\": [\n        {\n            \"unitPrice\": 6000,\n            \"code\": \"101110\",\n            \"quantity\": 1,\n            \"name\": \"iphone\",\n            \"sku\": \"black\"\n        }\n    ],\n    \"failureUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"validityPeriod\": 7200,\n    \"cancelUrl\": \"https://hfgj.testpnr.com/crossDemo/webHook.do\",\n    \"orderTime\": \"2025-01-06T14:38:20+0800\",\n    \"shipping\": {\n        \"firstName\": \"lucy\",\n        \"lastName\": \"XU\",\n        \"phoneNumber\": \"13388888888\",\n        \"city\": \"Toronto\",\n        \"countryCode\": \"US\",\n        \"street\": \"st1e\",\n        \"company\": \"shipping company\",\n        \"postCode\": \"12345-1233\",\n        \"state\": \"CA\",\n        \"street2\": \"st2e\"\n    },\n    \"requestId\": \"cae2635338333r33333r3re\",\n    \"appId\": \"10000\",\n    \"checkoutSessionUrl\": \"https://uatacquire.cloudpnr.com/sessions/eyJTRVNTSU9OX0lEIjoiODUxNDEzYTktNmNiNy00ZmQ3LTkyNTItZGY1NTMzYTYwMmMzIiwiQ0hFQ0tPVVRfSUQiOiI2ZDBlYjdiMS0zYjllLTRlNWItODRkZi1iMWUxMTMzZTFhNzYifQ==\",\n    \"currency\": \"HKD\",\n    \"merchantMemo\": \"1111113131\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://uatacquire.cloudpnr.com/api/acquire/sdkcheckoutpayment/create",
+					"protocol": "https",
+					"host": [
+						"uatacquire",
+						"cloudpnr",
+						"com"
+					],
+					"path": [
+						"api",
+						"acquire",
+						"sdkcheckoutpayment",
+						"create"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

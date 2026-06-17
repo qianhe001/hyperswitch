@@ -1,0 +1,13 @@
+
+API测试要素
+测试环境域名: https://uatacquire.cloudpnr.com
+测试 X-AccessCode: 998822e76540cff183b5d9e3172a311f
+测试 X-SecretKey:fr7zlr7enm8nbc68mgv4zcdbaw1ci4o8hjpd8w656d9opzj6tf7du01vb2l7cz0acp4gsrpuu39arw0vmzgqv9mctwllkjvder14orsl72czetc295ue3ix0oddzaajeap4gstpz3e9rjun18nsphr0a746zmxurw16fc4aqjrhuq4l2gk2adk8sj3shdv3mvt5ose0i8uq67kbo1jxgbdt9ynw5nncs3k881jl7oihs5dc1fput3tvp4djw5m4bac9velhis5xv4hbjd4hwm2o5927akerxpk5t8aj2gwv6hnysuv35slw5q7ekomr72xob3ry7h6hbcegn8sxz5ps6rebdo2o1n8d1cr2pk6xlfdoldkv5r4flc289smu04jxlqevf9iuqksscq7ut06yq4ztidfucx5p6r986ls5s12tcrhcwcz7rcexwl3rkwsto9vc69c2oeh8ca1fx0wtk9cos4f5gvlfmpjjyla93lv6an9tnj0v45m2mdx15
+测试 appId: 10000
+
+
+汇付商户平台测试环境：https://uatsite.cloudpnr.com/user   
+账户名/密码：MEHK0989/123Qwe   
+你也可以在汇付商户平台 -> 账户管理-开发者菜单获取X-AccessCode、X-SecretKey
+
+PS：测试联调完成后，烦请填写《汇付国际外卡联调表》，以便我们了解您的联调进度情况，谢谢。

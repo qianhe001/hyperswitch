@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="renderer" content="webkit" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=0"
+    />
+    <meta http-equiv="Permissions-Policy" content="accelerometer=(self), gyroscope=(self)" />
+    <title>UPrimer Pay Demo</title>
+    <script src="https://checkout.uprimer.com/icc-pay/v2/index.js"></script>
+    <style>
+      .container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #pay-content {
+        width: 800px;
+      }
+      .control-panel {
+        margin: 20px;
+        padding: 20px;
+        border: 1px solid #eee;
+        border-radius: 8px;
+      }
+      .control-group {
+        margin-bottom: 15px;
+      }
+      .control-group label {
+        display: inline-block;
+        width: 100px;
+        margin-right: 10px;
+      }
+      select,
+      input {
+        padding: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        width: 200px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <!-- 控制面板 -->
+      <div class="control-panel">
+        <div class="color-group">
+          <div class="control-group">
+            <label>主题色:</label>
+            <input type="color" id="primaryColor" value="#484dd4" data-theme-key="primaryColor" />
+          </div>
+          <div class="control-group">
+            <label>成功色:</label>
+            <input type="color" id="successColor" value="#52C41A" data-theme-key="successColor" />
+          </div>
+          <div class="control-group">
+            <label>警告色:</label>
+            <input type="color" id="warningColor" value="#ef8e34" data-theme-key="warningColor" />
+          </div>
+          <div class="control-group">
+            <label>错误色:</label>
+            <input type="color" id="dangerColor" value="#e34d59" data-theme-key="dangerColor" />
+          </div>
+          <div class="control-group">
+            <label>正常色:</label>
+            <input type="color" id="infoColor" value="#909399" data-theme-key="infoColor" />
+          </div>
+          <div class="control-group">
+            <label>文字色:</label>
+            <input type="color" id="textColor" value="#000000" data-theme-key="textColor" />
+          </div>
+        </div>
+
+        <!-- 其他配置 -->
+        <div class="control-group">
+          <label>圆角:</label>
+          <input type="number" id="borderRadius" value="8" min="0" max="20" data-theme-key="borderRadius" />
+        </div>
+        <div class="control-group">
+          <label>字体大小:</label>
+          <input type="number" id="fontSize" value="14" min="12" max="20" data-theme-key="fontSize" />
+        </div>
+        <div class="control-group">
+          <label>输入框高度:</label>
+          <input type="number" id="componentSize" value="40" min="32" max="48" data-theme-key="componentSize" />
+        </div>
+        <div class="control-group">
+          <label>语言切换:</label>
+          <select id="language">
+            <option value="en">English</option>
+            <option value="cn">中文</option>
+            <option value="pt">Português</option>
+            <option value="tw">繁體中文</option>
+            <option value="es">Español</option>
+            <option value="de">Deutsch</option>
+          </select>
+        </div>
+		<div class="control-group">
+          <label>api接口地址:</label>
+          <input type="text" id="apiUrl" value="https://acquire.uprimer.com" />
+        </div>
+      </div>
+
+      <!-- 支付组件容器 -->
+      <div id="pay-content"></div>
+    </div>
+
+    <script>
+      // 初始化支付组件
+      const pay = new UPrimerPay({
+        el: "#pay-content",
+        environment: "production",
+        theme: {
+          primaryColor: "#484dd4",
+        },
+        locale: "en",
+        debug: true,
+        onSuccess: (result) => {
+          console.log("submit successful:", result);
+          alert("submit successful!");
+          alert("checkoutSessionUrl=" + result.checkoutSessionUrl);
+        },
+        onError: (error) => {
+          console.error("submit failed:", error);
+          alert("submit failed: " + error.message);
+        },
+      });
+
+      // 挂载组件
+      pay.mount();
+
+      // 主题更新处理函数
+      const handleThemeChange = (e) => {
+        const key = e.target.dataset.themeKey;
+        const value = e.target.type === "number" ? parseInt(e.target.value) : e.target.value;
+
+        pay.updateConfig({
+          theme: {
+            [key]: value,
+          },
+        });
+      };
+
+      // 绑定所有主题配置的事件
+      document.querySelectorAll("[data-theme-key]").forEach((element) => {
+        element.addEventListener("change", handleThemeChange);
+      });
+
+      // 语言切换
+      document.getElementById("language").addEventListener("change", (e) => {
+        pay.updateConfig({
+          locale: e.target.value,
+        });
+      });
+	  
+	   // 接口切换
+      document.getElementById("apiUrl").addEventListener("blur", (e) => {
+        pay.updateConfig({
+          apiUrl: e.target.value,
+        });
+      });
+    </script>
+  </body>
+</html>
