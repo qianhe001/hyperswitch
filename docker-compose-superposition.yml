@@ -1,0 +1,83 @@
+version: "3.8"
+
+volumes:
+  cargo_cache:
+  pg_data:
+  router_build_cache:
+  scheduler_build_cache:
+  drainer_build_cache:
+  redisinsight_store:
+
+networks:
+  router_net:
+
+services:
+  redis-standalone:
+    image: docker.io/redis:7
+    networks:
+      - router_net
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep '^PONG$'"]
+      interval: 5s
+      retries: 3
+      start_period: 5s
+      timeout: 5s
+  superposition:
+    image: ghcr.io/juspay/superposition-demo:0.102.0
+    ports:
+      - "8081:8080"
+    networks:
+      - router_net
+    environment:
+      - API_HOSTNAME=http://localhost:8081
+      - REDIS_URL=redis://redis-standalone:6379
+
+  superposition-init:
+    image: alpine:latest
+    depends_on:
+      superposition:
+        condition: service_started
+    networks:
+      - router_net
+    volumes:
+      - ./config/superposition_seed.toml:/seed.toml:ro
+      - ./scripts/seed_superposition.sh:/seed_superposition.sh:ro
+    environment:
+      - SUPERPOSITION_URL=http://superposition:8080
+      - SEED_FILE=/seed.toml
+      - WORKSPACE_ID=dev
+      - ORG_ID=localorg
+    command: sh -c "apk add --no-cache curl jq yq bash && exec bash /seed_superposition.sh"
+    restart: "no"
+  hyperswitch-control-center:
+    image: docker.juspay.io/juspaydotin/hyperswitch-control-center:latest
+    pull_policy: always
+    networks:
+      - router_net
+    ports:
+      - "9000:9000"
+    environment:
+      - configPath=/tmp/dashboard-config.toml
+    volumes:
+      - ./config/dashboard.toml:/tmp/dashboard-config.toml
+  hyperswitch-web-sdk:
+    build:
+      dockerfile_inline: |
+        FROM node:lts
+        RUN git clone https://github.com/juspay/hyperswitch-web.git --depth 1
+        WORKDIR hyperswitch-web
+        RUN npm i --force
+        RUN npm install -g webpack webpack-cli
+    command: bash -c 'rm -rf node_modules/.cache && npm run re:build && npx webpack serve --config webpack.dev.js --host 0.0.0.0'
+    ports:
+      - "9050:9050"
+    environment:
+      sdkEnv: local
+      envSdkUrl: http://192.168.1.69:9050
+      ENV_SDK_URL: http://192.168.1.69:9050
+      envBackendUrl: http://192.168.1.69:8080
+      ENV_BACKEND_URL: http://192.168.1.69:8080
+      envLoggingUrl: http://192.168.1.69:8207
+      ENV_LOGGING_URL: http://192.168.1.69:8207
