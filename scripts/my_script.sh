@@ -10,12 +10,16 @@ export HYPERSWITCH_SERVER_URL="http://localhost:8080"
 export HYPERSWITCH_CONTROL_CENTER_URL="http://localhost:9000"  # 即使未启动也可以
 ./scripts/create_default_user.sh
 
+
+sudo docker compose -f docker-compose-superposition.yml up -d --pull never 
 sudo docker compose -f docker-compose-superposition.yml stop hyperswitch-web-sdk
 sudo docker compose -f docker-compose-superposition.yml rm hyperswitch-web-sdk
 sudo docker compose -f docker-compose-superposition.yml up -d --force-recreate --pull never hyperswitch-control-center
 sudo docker compose -f docker-compose-superposition.yml up -d --force-recreate --pull never hyperswitch-web-sdk
 sudo docker compose -f docker-compose-superposition.yml up --force-recreate --pull never hyperswitch-web-sdk
 sudo docker compose -f docker-compose-superposition.yml up -d
+
+cargo run -j 1
 
 访问sdk: http://192.168.1.69:9050/HyperLoader.js
 访问控制中心: http://192.168.1.69:9000/dashboard/home

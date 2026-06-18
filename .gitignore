@@ -1,0 +1,51 @@
+# Rust build output
+/target/
+
+# Cargo local caches and generated files
+/.cargo/.package-cache
+/.cargo/.global-cache
+
+# Keep shared Cargo config tracked
+!/.cargo/
+!/.cargo/config.toml
+
+# JavaScript dependencies and build output
+/node_modules/
+/dist/
+/build/
+/.next/
+/.nuxt/
+/coverage/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor and IDE local files
+/.idea/
+/.vscode/
+/.history/
+*.swp
+*.swo
+*~
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local databases and temporary files
+*.sqlite
+*.sqlite3
+*.db
+*.tmp
+*.temp
