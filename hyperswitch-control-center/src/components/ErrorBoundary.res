@@ -1,0 +1,14 @@
+/*
+ ? Reference - https://github.com/rescript-lang/rescript-react/blob/master/src/RescriptReactErrorBoundary.res
+ */
+
+let defaultFallback = _ =>
+  <div className="text-red-600 font-bold text-center flex flex-col items-center">
+    {"An error occurred"->React.string}
+    <Button text="Reset" buttonType=Primary onClick={_ => Window.Location.hardReload(true)} />
+  </div>
+
+@react.component
+let make = (~children, ~renderFallback=defaultFallback) => {
+  <RescriptReactErrorBoundary fallback={renderFallback}> {children} </RescriptReactErrorBoundary>
+}

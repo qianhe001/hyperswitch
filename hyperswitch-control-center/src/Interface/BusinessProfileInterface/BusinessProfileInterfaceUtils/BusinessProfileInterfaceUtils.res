@@ -1,0 +1,294 @@
+open LogicUtils
+open BusinessProfileInterfaceTypes
+
+let constructWebhookDetailsObject = webhookDetailsDict => {
+  webhook_version: webhookDetailsDict->getOptionString("webhook_version"),
+  webhook_username: webhookDetailsDict->getOptionString("webhook_username"),
+  webhook_password: webhookDetailsDict->getOptionString("webhook_password"),
+  webhook_url: webhookDetailsDict->getOptionString("webhook_url"),
+  payment_created_enabled: webhookDetailsDict->getOptionBool("payment_created_enabled"),
+  payment_succeeded_enabled: webhookDetailsDict->getOptionBool("payment_succeeded_enabled"),
+  payment_failed_enabled: webhookDetailsDict->getOptionBool("payment_failed_enabled"),
+}
+
+let constructAuthConnectorObject = authConnectorDict => {
+  authentication_connectors: authConnectorDict->getOptionalArrayFromDict(
+    "authentication_connectors",
+  ),
+  three_ds_requestor_url: authConnectorDict->getOptionString("three_ds_requestor_url"),
+  three_ds_requestor_app_url: authConnectorDict->getOptionString("three_ds_requestor_app_url"),
+}
+
+let constructAcquirerNetworkEntry = (dict: Dict.t<JSON.t>): acquirerNetworkEntry => {
+  {
+    network: dict->getString("network", ""),
+    acquirer_bin: dict->getString("acquirer_bin", ""),
+    acquirer_ica: dict->getOptionString("acquirer_ica"),
+    acquirer_fraud_rate: dict->getOptionFloat("acquirer_fraud_rate"),
+    acquirer_country_code: dict->getOptionString("acquirer_country_code"),
+    acquirer_assigned_merchant_id: dict->getOptionString("acquirer_assigned_merchant_id"),
+    merchant_name: dict->getOptionString("merchant_name"),
+  }
+}
+
+let constructAcquirerConfigBucket = (dict): acquirerConfigBucket => {
+  let configs =
+    dict
+    ->getDictfromDict("configs")
+    ->Dict.toArray
+    ->Array.map(((bucketId, entriesJson)) => (
+      bucketId,
+      entriesJson->getArrayDataFromJson(constructAcquirerNetworkEntry),
+    ))
+    ->Dict.fromArray
+  {
+    default_acquirer_config: dict->getString("default_acquirer_config", ""),
+    configs,
+  }
+}
+let getOptionalHeaders = (jsonDict, key) =>
+  jsonDict
+  ->getJsonFromDict(key)
+  ->(
+    json =>
+      switch json->JSON.Classify.classify {
+      | Object(headers) => Some(headers)
+      | _ => None
+      }
+  )
+
+let getOptionalHeadersWithEmptyValParsing = (~dict, ~key) => {
+  Some(
+    dict
+    ->Dict.get(key)
+    ->Option.mapOr(JSON.Encode.null, _ => {
+      let parsedValue = PaymentSettingsRevampedUtils.removeEmptyValues(~dict, ~key)
+      parsedValue->Identity.genericTypeToJson
+    }),
+  )
+}
+
+let convertOptionalBoolToOptionalJson = optBool => {
+  let jsonVal = switch optBool {
+  | Some(value) => value->JSON.Encode.bool
+  | None => JSON.Encode.null
+  }
+  Some(jsonVal)
+}
+
+let convertOptionalStringToOptionalJson = optString => {
+  let jsonVal = switch optString {
+  | Some(value) => value->JSON.Encode.string
+  | None => JSON.Encode.null
+  }
+  Some(jsonVal)
+}
+
+let convertOptionalIntToOptionalJson = optInt => {
+  let jsonVal = switch optInt {
+  | Some(value) => value->JSON.Encode.int
+  | None => JSON.Encode.null
+  }
+  Some(jsonVal)
+}
+
+let convertDictToOptionalJson = dict => {
+  !(dict->isEmptyDict) ? Some(dict->JSON.Encode.object) : Some(JSON.Encode.null)
+}
+
+let getBackgroundImage = backgroundImageDict => {
+  {
+    url: backgroundImageDict->getString("url", ""),
+    position: backgroundImageDict->getString("position", ""),
+    size: backgroundImageDict->getString("size", ""),
+  }
+}
+
+let styleConfigMapper = paymentLinkConfigDict => {
+  let backgroundImageDict = paymentLinkConfigDict->getDictfromDict("background_image")
+
+  {
+    theme: paymentLinkConfigDict->getOptionString("theme"),
+    logo: paymentLinkConfigDict->getOptionString("logo"),
+    seller_name: paymentLinkConfigDict->getOptionString("seller_name"),
+    sdk_layout: paymentLinkConfigDict->getOptionString("sdk_layout"),
+    display_sdk_only: paymentLinkConfigDict->getOptionBool("display_sdk_only"),
+    enabled_saved_payment_method: paymentLinkConfigDict->getOptionBool(
+      "enabled_saved_payment_method",
+    ),
+    hide_card_nickname_field: paymentLinkConfigDict->getOptionBool("hide_card_nickname_field"),
+    show_card_form_by_default: paymentLinkConfigDict->getOptionBool("show_card_form_by_default"),
+    transaction_details: paymentLinkConfigDict->Dict.get("transaction_details"),
+    background_image: backgroundImageDict->isEmptyDict
+      ? None
+      : Some(backgroundImageDict->getBackgroundImage),
+    details_layout: paymentLinkConfigDict->getOptionString("details_layout"),
+    payment_button_text: paymentLinkConfigDict->getOptionString("payment_button_text"),
+    custom_message_for_card_terms: paymentLinkConfigDict->getOptionString(
+      "custom_message_for_card_terms",
+    ),
+    payment_button_colour: paymentLinkConfigDict->getOptionString("payment_button_colour"),
+    skip_status_screen: paymentLinkConfigDict->getOptionBool("skip_status_screen"),
+    payment_button_text_colour: paymentLinkConfigDict->getOptionString(
+      "payment_button_text_colour",
+    ),
+    background_colour: paymentLinkConfigDict->getOptionString("background_colour"),
+    sdk_ui_rules: paymentLinkConfigDict->Dict.get("sdk_ui_rules"),
+    payment_link_ui_rules: paymentLinkConfigDict->Dict.get("payment_link_ui_rules"),
+    enable_button_only_on_form_ready: paymentLinkConfigDict->getOptionBool(
+      "enable_button_only_on_form_ready",
+    ),
+    payment_form_header_text: paymentLinkConfigDict->getOptionString("payment_form_header_text"),
+    payment_form_label_type: paymentLinkConfigDict->getOptionString("payment_form_label_type"),
+    show_card_terms: paymentLinkConfigDict->getOptionString("show_card_terms"),
+    is_setup_mandate_flow: paymentLinkConfigDict->getOptionBool("is_setup_mandate_flow"),
+    color_icon_card_cvc_error: paymentLinkConfigDict->getOptionString("color_icon_card_cvc_error"),
+  }
+}
+
+let paymentLinkConfigMapper = paymentLinkConfigDict => {
+  let backgroundImageDict = paymentLinkConfigDict->getDictfromDict("background_image")
+
+  {
+    theme: paymentLinkConfigDict->getOptionString("theme"),
+    logo: paymentLinkConfigDict->getOptionString("logo"),
+    seller_name: paymentLinkConfigDict->getOptionString("seller_name"),
+    sdk_layout: paymentLinkConfigDict->getOptionString("sdk_layout"),
+    display_sdk_only: paymentLinkConfigDict->getOptionBool("display_sdk_only"),
+    enabled_saved_payment_method: paymentLinkConfigDict->getOptionBool(
+      "enabled_saved_payment_method",
+    ),
+    hide_card_nickname_field: paymentLinkConfigDict->getOptionBool("hide_card_nickname_field"),
+    show_card_form_by_default: paymentLinkConfigDict->getOptionBool("show_card_form_by_default"),
+    transaction_details: paymentLinkConfigDict->Dict.get("transaction_details"),
+    background_image: backgroundImageDict->isEmptyDict
+      ? None
+      : Some(backgroundImageDict->getBackgroundImage),
+    details_layout: paymentLinkConfigDict->getOptionString("details_layout"),
+    payment_button_text: paymentLinkConfigDict->getOptionString("payment_button_text"),
+    custom_message_for_card_terms: paymentLinkConfigDict->getOptionString(
+      "custom_message_for_card_terms",
+    ),
+    payment_button_colour: paymentLinkConfigDict->getOptionString("payment_button_colour"),
+    skip_status_screen: paymentLinkConfigDict->getOptionBool("skip_status_screen"),
+    payment_button_text_colour: paymentLinkConfigDict->getOptionString(
+      "payment_button_text_colour",
+    ),
+    background_colour: paymentLinkConfigDict->getOptionString("background_colour"),
+    sdk_ui_rules: paymentLinkConfigDict->Dict.get("sdk_ui_rules"),
+    payment_link_ui_rules: paymentLinkConfigDict->Dict.get("payment_link_ui_rules"),
+    enable_button_only_on_form_ready: paymentLinkConfigDict->getOptionBool(
+      "enable_button_only_on_form_ready",
+    ),
+    payment_form_header_text: paymentLinkConfigDict->getOptionString("payment_form_header_text"),
+    payment_form_label_type: paymentLinkConfigDict->getOptionString("payment_form_label_type"),
+    show_card_terms: paymentLinkConfigDict->getOptionString("show_card_terms"),
+    is_setup_mandate_flow: paymentLinkConfigDict->getOptionBool("is_setup_mandate_flow"),
+    color_icon_card_cvc_error: paymentLinkConfigDict->getOptionString("color_icon_card_cvc_error"),
+    branding_visibility: paymentLinkConfigDict->getOptionBool("branding_visibility"),
+    domain_name: paymentLinkConfigDict->getOptionString("domain_name"),
+    allowed_domains: paymentLinkConfigDict->Dict.get("allowed_domains"),
+    business_specific_configs: paymentLinkConfigDict->Dict.get("business_specific_configs"),
+  }
+}
+
+let paymentMethodBlockingEntryMapper: Dict.t<JSON.t> => paymentMethodBlockingEntry = entryDict => {
+  card_types: entryDict->getOptionStrArrayFromDict("card_types"),
+}
+
+let paymentMethodBlockingMapper: Dict.t<JSON.t> => paymentMethodBlocking = pmbDict => {
+  let cardDict = pmbDict->getDictfromDict("card")
+  let walletDict = pmbDict->getDictfromDict("wallet")
+  {
+    card: cardDict->isEmptyDict ? None : Some(cardDict->paymentMethodBlockingEntryMapper),
+    wallet: walletDict->isEmptyDict ? None : Some(walletDict->paymentMethodBlockingEntryMapper),
+  }
+}
+
+let externalVaultConnectorDetailsMapper = externalVaultConnectorDetailsDict => {
+  vault_connector_id: externalVaultConnectorDetailsDict->getString("vault_connector_id", ""),
+  vault_token_selector: externalVaultConnectorDetailsDict->getOptionalArrayFromDict(
+    "vault_token_selector",
+  ),
+}
+
+let surchargeConnectorDetailsMapper = surchargeConnectorDetailsDict => {
+  surcharge_connector_id: surchargeConnectorDetailsDict->getString("surcharge_connector_id", ""),
+}
+
+let mapJsontoCommonType: JSON.t => commonProfileEntity = input => {
+  let jsonDict = input->getDictFromJsonObject
+  let authConnectorDetails = jsonDict->getDictfromDict("authentication_connector_details")
+  let paymentLinkConfig = jsonDict->getDictfromDict("payment_link_config")
+  let externalVaultConnectorDetails = jsonDict->getDictfromDict("external_vault_connector_details")
+  let surchargeConnectorDetails = jsonDict->getDictfromDict("surcharge_connector_details")
+  let outgoingWebhookHeaders = getOptionalHeaders(jsonDict, "outgoing_webhook_custom_http_headers")
+  let metadataHeaders = getOptionalHeaders(jsonDict, "metadata")
+  let paymentMethodBlockingDict = jsonDict->getDictfromDict("payment_method_blocking")
+  let acquirerConfigBucketDict = jsonDict->getDictfromDict("acquirer_config_bucket")
+
+  {
+    profile_id: jsonDict->getString("profile_id", ""),
+    merchant_id: jsonDict->getString("merchant_id", ""),
+    profile_name: jsonDict->getString("profile_name", ""),
+    return_url: jsonDict->getOptionString("return_url"),
+    payment_response_hash_key: jsonDict->getOptionString("payment_response_hash_key"),
+    webhook_details: jsonDict->getDictfromDict("webhook_details")->constructWebhookDetailsObject,
+    authentication_connector_details: !(authConnectorDetails->isEmptyDict)
+      ? Some(authConnectorDetails->constructAuthConnectorObject)
+      : None,
+    collect_shipping_details_from_wallet_connector: jsonDict->getOptionBool(
+      "collect_shipping_details_from_wallet_connector",
+    ),
+    always_collect_shipping_details_from_wallet_connector: jsonDict->getOptionBool(
+      "always_collect_shipping_details_from_wallet_connector",
+    ),
+    collect_billing_details_from_wallet_connector: jsonDict->getOptionBool(
+      "collect_billing_details_from_wallet_connector",
+    ),
+    always_collect_billing_details_from_wallet_connector: jsonDict->getOptionBool(
+      "always_collect_billing_details_from_wallet_connector",
+    ),
+    is_connector_agnostic_mit_enabled: jsonDict->getOptionBool("is_connector_agnostic_mit_enabled"),
+    is_click_to_pay_enabled: jsonDict->getOptionBool("is_click_to_pay_enabled"),
+    authentication_product_ids: Some(jsonDict->getJsonObjectFromDict("authentication_product_ids")),
+    outgoing_webhook_custom_http_headers: outgoingWebhookHeaders,
+    is_auto_retries_enabled: jsonDict->getOptionBool("is_auto_retries_enabled"),
+    max_auto_retries_enabled: jsonDict->getOptionInt("max_auto_retries_enabled"),
+    metadata: metadataHeaders,
+    force_3ds_challenge: jsonDict->getOptionBool("force_3ds_challenge"),
+    is_debit_routing_enabled: jsonDict->getOptionBool("is_debit_routing_enabled"),
+    acquirer_configs: jsonDict->getOptionalArrayFromDict("acquirer_configs"),
+    acquirer_config_bucket: !(acquirerConfigBucketDict->isEmptyDict)
+      ? Some(acquirerConfigBucketDict->constructAcquirerConfigBucket)
+      : None,
+    merchant_category_code: jsonDict->getOptionString("merchant_category_code"),
+    is_network_tokenization_enabled: jsonDict->getOptionBool("is_network_tokenization_enabled"),
+    always_request_extended_authorization: jsonDict->getOptionBool(
+      "always_request_extended_authorization",
+    ),
+    always_enable_overcapture: jsonDict->getOptionBool("always_enable_overcapture"),
+    is_manual_retry_enabled: jsonDict->getOptionBool("is_manual_retry_enabled"),
+    collect_shipping_details_from_wallet_connector_if_required: jsonDict->getOptionBool(
+      "collect_shipping_details_from_wallet_connector_if_required",
+    ),
+    collect_billing_details_from_wallet_connector_if_required: jsonDict->getOptionBool(
+      "collect_billing_details_from_wallet_connector_if_required",
+    ),
+    billing_processor_id: jsonDict->getOptionString("billing_processor_id"),
+    surcharge_connector_details: surchargeConnectorDetails->isEmptyDict
+      ? None
+      : Some(surchargeConnectorDetails->surchargeConnectorDetailsMapper),
+    payment_link_config: paymentLinkConfig->isEmptyDict
+      ? None
+      : Some(paymentLinkConfig->paymentLinkConfigMapper),
+    split_txns_enabled: jsonDict->getOptionString("split_txns_enabled"),
+    is_external_vault_enabled: jsonDict->getOptionString("is_external_vault_enabled"),
+    external_vault_connector_details: externalVaultConnectorDetails->isEmptyDict
+      ? None
+      : Some(externalVaultConnectorDetails->externalVaultConnectorDetailsMapper),
+    payment_method_blocking: paymentMethodBlockingDict->isEmptyDict
+      ? None
+      : Some(paymentMethodBlockingDict->paymentMethodBlockingMapper),
+  }
+}

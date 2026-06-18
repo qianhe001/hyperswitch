@@ -1,0 +1,94 @@
+@react.component
+let make = (
+  ~method: option<ConnectorTypes.paymentMethodConfigType>,
+  ~setMetaData,
+  ~updateDetails,
+  ~paymentMethodsEnabled,
+  ~paymentMethod,
+  ~onCloseClickCustomFun,
+  ~pmtName: string,
+  ~closeAccordionFn,
+) => {
+  open LogicUtils
+  open ConnectorTypes
+  open ConnectorUtils
+  let connector = UrlUtils.useGetFilterDictFromUrl("")->getString("name", "")
+
+  let updateMetadata = json => {
+    setMetaData(_ => json)
+    switch method {
+    | Some(pmt) => paymentMethodsEnabled->addMethod(paymentMethod, pmt)->updateDetails
+    | _ => ()
+    }
+  }
+
+  let updatePaymentMethods = () => {
+    switch method {
+    | Some(pmt) => paymentMethodsEnabled->addMethod(paymentMethod, pmt)->updateDetails
+    | _ => ()
+    }
+  }
+
+  <div>
+    {switch paymentMethod->getPaymentMethodFromString {
+    | BankDebit =>
+      <BankDebit paymentMethod paymentMethodType=pmtName closeAccordionFn paymentMethodsEnabled />
+    | _ => React.null
+    }}
+    <RenderIf condition={paymentMethod->getPaymentMethodFromString !== BankDebit}>
+      {switch pmtName->getPaymentMethodTypeFromString {
+      | ApplePay =>
+        <ApplePayIntegration
+          connector closeAccordionFn update=updateMetadata onCloseClickCustomFun
+        />
+      | GooglePay =>
+        <GooglePayIntegration
+          connector closeAccordionFn update=updateMetadata onCloseClickCustomFun
+        />
+      | SamsungPay =>
+        <SamsungPayIntegration
+          connector closeAccordionFn update=updatePaymentMethods onCloseClickCustomFun
+        />
+      | Paze =>
+        <PazeIntegration
+          connector closeAccordionFn update=updatePaymentMethods onCloseClickCustomFun
+        />
+      | AmazonPay =>
+        <AmazonPayIntegration
+          connector closeAccordionFn update=updatePaymentMethods onCloseClickCustomFun
+        />
+      | Pix =>
+        <PixIntegration connector closeAccordionFn update=updateMetadata onCloseClickCustomFun />
+      | PixEmv =>
+        <PixIntegration
+          connector
+          metadataKey="pix_emv"
+          closeAccordionFn
+          update=updateMetadata
+          onCloseClickCustomFun
+        />
+      | PixAutomaticoQr =>
+        <PixAutomaticoIntegration
+          connector
+          metadataKey="pix_automatico_qr"
+          closeAccordionFn
+          update=updateMetadata
+          onCloseClickCustomFun
+        />
+      | PixAutomaticoPush =>
+        <PixAutomaticoIntegration
+          connector
+          metadataKey="pix_automatico_push"
+          closeAccordionFn
+          update=updateMetadata
+          onCloseClickCustomFun
+        />
+      | Boleto =>
+        <BoletoIntegration connector closeAccordionFn update=updateMetadata onCloseClickCustomFun />
+      | PayPal =>
+        <PayPalIntegration connector closeAccordionFn update=updateMetadata onCloseClickCustomFun />
+      | _ => React.null
+      }}
+    </RenderIf>
+  </div>
+}

@@ -1,0 +1,167 @@
+open OMPSwitchTypes
+open LogicUtils
+
+let ompDefaultValue: (string, string) => ompListTypes = (currUserId, currUserName) => {
+  id: currUserId,
+  name: {currUserName->isEmptyString ? currUserId : currUserName},
+  type_: #standard,
+}
+
+let currentOMPName = (list: array<ompListTypes>, id: string) => {
+  switch list->Array.find(listValue => listValue.id == id) {
+  | Some(listValue) => listValue.name
+  | None => id
+  }
+}
+
+let ompTypeMapper = (ompType: string): ompType => {
+  switch ompType {
+  | "platform" => #platform
+  | "connected" => #connected
+  | "standard" => #standard
+  | _ => #standard
+  }
+}
+
+let ompTypeHeading = (ompType: ompType): string => {
+  switch ompType {
+  | #platform => "Platform Merchant"
+  | #connected => "Connected Merchants"
+  | #standard => "Standard Merchants"
+  }
+}
+
+let orgItemToObjMapper: dict<JSON.t> => ompListTypes = dict => {
+  {
+    id: dict->getString("org_id", ""),
+    name: {
+      dict->getString("org_name", "")->isEmptyString
+        ? dict->getString("org_id", "")
+        : dict->getString("org_name", "")
+    },
+    type_: dict->getString("org_type", "")->ompTypeMapper,
+  }
+}
+
+let merchantItemToObjMapper: Dict.t<'t> => ompListTypes = dict => {
+  {
+    id: dict->getString("merchant_id", ""),
+    name: {
+      dict->getString("merchant_name", "")->isEmptyString
+        ? dict->getString("merchant_id", "")
+        : dict->getString("merchant_name", "")
+    },
+    productType: dict
+    ->getString("product_type", "")
+    ->ProductUtils.getProductVariantFromString(
+      ~version=dict->getString("version", "v1")->UserInfoUtils.versionMapper,
+    ),
+    version: dict->getString("version", "v1")->UserInfoUtils.versionMapper,
+    type_: dict->getString("merchant_account_type", "")->ompTypeMapper,
+  }
+}
+
+let profileItemToObjMapper = dict => {
+  {
+    id: dict->getString("profile_id", ""),
+    name: {
+      dict->getString("profile_name", "")->isEmptyString
+        ? dict->getString("profile_id", "")
+        : dict->getString("profile_name", "")
+    },
+  }
+}
+
+let org = {
+  label: "Organization",
+  entity: #Organization,
+}
+let merchant = {
+  label: "Merchant",
+  entity: #Merchant,
+}
+let profile = {
+  label: "Profile",
+  entity: #Profile,
+}
+
+let transactionViewList = (~checkUserEntity): ompViews => {
+  if checkUserEntity([#Tenant, #Merchant, #Organization]) {
+    [merchant, profile]
+  } else if checkUserEntity([#Profile]) {
+    [profile]
+  } else {
+    []
+  }
+}
+
+let analyticsViewList = (~checkUserEntity): ompViews => {
+  if checkUserEntity([#Tenant, #Organization]) {
+    [org, merchant, profile]
+  } else if checkUserEntity([#Merchant]) {
+    [merchant, profile]
+  } else if checkUserEntity([#Profile]) {
+    [profile]
+  } else {
+    []
+  }
+}
+
+let keyExtractorForMerchantid = item => {
+  let dict = item->getDictFromJsonObject
+  dict->getString("merchant_id", "")
+}
+
+let userSwitch = (~ompData: array<string>, ~path) => {
+  let data = {
+    orgId: ompData->Array.get(0),
+    merchantId: ompData->Array.get(1),
+    profileId: ompData->Array.get(2),
+    version: ompData->getValueFromArray(3, "")->UserInfoUtils.versionMapper,
+    path,
+  }
+  if data.profileId->Option.isSome {
+    Some(data)
+  } else {
+    None
+  }
+}
+
+let isDuplicateOmpName = (list: array<ompListTypes>, ~name: string) => {
+  list->Array.some(item => item.name->String.toLowerCase == name->String.toLowerCase)
+}
+
+let validateOmpName = (
+  ~name: string,
+  ~list: array<ompListTypes>,
+  ~entityLabel: string,
+  ~regex: string="^([a-z]|[A-Z]|[0-9]|_|\\s)+$",
+) => {
+  let isDuplicate = isDuplicateOmpName(list, ~name)
+  if name->isEmptyString {
+    `${entityLabel} name cannot be empty`
+  } else if name->String.length > 64 {
+    `${entityLabel} name cannot exceed 64 characters`
+  } else if !RegExp.test(RegExp.fromString(regex), name) {
+    `${entityLabel} name should not contain special characters`
+  } else if isDuplicate {
+    `${entityLabel} with this name already exists`
+  } else {
+    ""
+  }
+}
+
+let merchantTypeOptions: array<SelectBox.dropdownOption> = [
+  {
+    label: `${(#connected: ompType :> string)->capitalizeString} Merchant`,
+    value: (#connected: ompType :> string),
+    labelDescription: "Merchant managed by the platform",
+    description: "Connected merchants are onboarded under a Platform Organization. Both the connected merchant and the platform merchant can perform operations for the connected merchant, with the platform merchant able to act on their behalf. Features such as shared customers and payment methods are also supported.",
+  },
+  {
+    label: `${(#standard: ompType :> string)->capitalizeString} Merchant`,
+    value: (#standard: ompType :> string),
+    labelDescription: "Independent merchant within the organization",
+    description: "Standard merchants are independent within a Platform Organization. The platform merchant can generate their API keys, but all other operations for the standard merchant are handled independently.",
+  },
+]

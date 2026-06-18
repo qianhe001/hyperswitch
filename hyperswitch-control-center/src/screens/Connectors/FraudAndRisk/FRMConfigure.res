@@ -1,0 +1,142 @@
+@react.component
+let make = () => {
+  open APIUtils
+  open ConnectorTypes
+  open ConnectorUtils
+  open LogicUtils
+  open FRMInfo
+
+  let getURL = useGetURL()
+  let featureFlagDetails = HyperswitchAtom.featureFlagAtom->Recoil.useRecoilValueFromAtom
+  let url = RescriptReactRouter.useUrl()
+  let fetchDetails = useGetMethod()
+  let (screenState, setScreenState) = React.useState(_ => PageLoaderWrapper.Loading)
+  let (initialValues, setInitialValues) = React.useState(_ => Dict.make()->JSON.Encode.object)
+  let frmName = UrlUtils.useGetFilterDictFromUrl("")->getString("name", "")
+  let frmID = HSwitchUtils.getConnectorIDFromUrl(url.path->List.toArray, "")
+  let {profileId, merchantId} = React.useContext(
+    UserInfoProvider.defaultContext,
+  ).getCommonSessionDetails()
+  let updateDetails = useUpdateMethod()
+
+  let initStep = PaymentMethods
+
+  let isUpdateFlow = switch url.path->HSwitchUtils.urlPath {
+  | list{"fraud-risk-management", "new"} => false
+  | _ => true
+  }
+
+  let (currentStep, setCurrentStep) = React.useState(_ => isUpdateFlow ? Preview : initStep)
+  let displayNameForConnector =
+    frmName->ConnectorUtils.getDisplayNameForConnector(~connectorType=FRMPlayer)
+  let selectedFRMName: ConnectorTypes.connectorTypes = React.useMemo(() => {
+    let frmName = frmName->ConnectorUtils.getConnectorNameTypeFromString(~connectorType=FRMPlayer)
+    setInitialValues(_ => {
+      FRMUtils.generateInitialValuesDict(
+        ~selectedFRMName=frmName,
+        ~isLiveMode=featureFlagDetails.isLiveMode,
+        ~profileId,
+      )
+    })
+    setCurrentStep(_ => isUpdateFlow ? Preview : initStep)
+    frmName
+  }, [frmName])
+
+  let getFRMDetails = async url => {
+    try {
+      let res = await fetchDetails(url)
+      setInitialValues(_ => res)
+      setScreenState(_ => Success)
+      setCurrentStep(prev => prev->getNextStep)
+    } catch {
+    | _ => setScreenState(_ => Error("Error Occurred!"))
+    }
+  }
+
+  let updateMerchantDetails = async () => {
+    let frmName =
+      frmName
+      ->getConnectorNameTypeFromString(~connectorType=FRMPlayer)
+      ->getConnectorNameString
+    let info =
+      [
+        ("data", frmName->JSON.Encode.string),
+        ("type", "single"->JSON.Encode.string),
+      ]->getJsonFromArrayOfJson
+    let body =
+      [
+        ("frm_routing_algorithm", info),
+        ("merchant_id", merchantId->JSON.Encode.string),
+      ]->getJsonFromArrayOfJson
+    let url = getURL(~entityName=V1(MERCHANT_ACCOUNT), ~methodType=Post)
+    try {
+      let _ = await updateDetails(url, body, Post)
+    } catch {
+    | _ => setScreenState(_ => Error("Failed to update merchant details"))
+    }
+    Nullable.null
+  }
+
+  React.useEffect(() => {
+    if frmID !== "new" {
+      setScreenState(_ => Loading)
+      let url = getURL(~entityName=V1(FRAUD_RISK_MANAGEMENT), ~methodType=Get, ~id=Some(frmID))
+      getFRMDetails(url)->ignore
+    } else {
+      setScreenState(_ => Success)
+    }
+    None
+  }, [])
+
+  let path: array<BreadCrumbNavigation.breadcrumb> = []
+  if frmID === "new" {
+    path
+    ->Array.push({
+      title: {"Fraud Risk Management"},
+      link: "/fraud-risk-management",
+      warning: `You have not yet completed configuring your ${selectedFRMName
+        ->ConnectorUtils.getConnectorNameString
+        ->snakeToTitle} player. Are you sure you want to go back?`,
+      mixPanelCustomString: ` ${selectedFRMName->ConnectorUtils.getConnectorNameString}`,
+    })
+    ->ignore
+  } else {
+    path
+    ->Array.push({
+      title: {"Fraud Risk Management"},
+      link: "/fraud-risk-management",
+    })
+    ->ignore
+  }
+  <PageLoaderWrapper screenState>
+    <div className="flex flex-col gap-8 h-full">
+      <BreadCrumbNavigation path currentPageTitle={displayNameForConnector} />
+      <RenderIf condition={currentStep !== Preview}>
+        <ConnectorHome.ConnectorCurrentStepIndicator currentStep stepsArr=FRMInfo.stepsArr />
+      </RenderIf>
+      <div className="bg-white rounded border h-3/4 p-2 md:p-6 overflow-scroll">
+        {switch currentStep {
+        | IntegFields =>
+          <FRMIntegrationFields
+            setCurrentStep
+            selectedFRMName
+            setInitialValues
+            retrievedValues=Some(initialValues)
+            isUpdateFlow
+            updateMerchantDetails
+          />
+        | PaymentMethods =>
+          <FRMPaymentMethods
+            setCurrentStep retrievedValues=Some(initialValues) setInitialValues isUpdateFlow
+          />
+        | SummaryAndTest
+        | Preview =>
+          <FRMSummary
+            initialValues setInitialValues currentStep updateMerchantDetails isUpdateFlow
+          />
+        | _ => React.null
+        }}
+      </div>
+    </div>
+  </PageLoaderWrapper>
+}

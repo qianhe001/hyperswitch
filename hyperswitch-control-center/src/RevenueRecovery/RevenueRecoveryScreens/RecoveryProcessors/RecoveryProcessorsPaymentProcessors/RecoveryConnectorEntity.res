@@ -1,0 +1,120 @@
+open ConnectorTypes
+
+type colType =
+  | Name
+  | Status
+  | Disabled
+  | Actions
+  | ProfileId
+  | ProfileName
+  | ConnectorLabel
+  | PaymentMethods
+  | MerchantConnectorId
+
+let defaultColumns = [
+  Name,
+  MerchantConnectorId,
+  ProfileId,
+  ProfileName,
+  ConnectorLabel,
+  Status,
+  Disabled,
+  Actions,
+  PaymentMethods,
+]
+let getHeading = colType => {
+  switch colType {
+  | Name => Table.makeHeaderInfo(~key="connector_name", ~title="Processor")
+  | Status => Table.makeHeaderInfo(~key="status", ~title="Integration status")
+  | Disabled => Table.makeHeaderInfo(~key="disabled", ~title="Disabled")
+  | Actions => Table.makeHeaderInfo(~key="actions", ~title="")
+  | ProfileId => Table.makeHeaderInfo(~key="profile_id", ~title="Profile ID")
+  | MerchantConnectorId =>
+    Table.makeHeaderInfo(~key="merchant_connector_id", ~title="Merchant Connector ID")
+  | ProfileName => Table.makeHeaderInfo(~key="profile_name", ~title="Profile Name")
+  | ConnectorLabel => Table.makeHeaderInfo(~key="connector_label", ~title="Connector Label")
+  | PaymentMethods => Table.makeHeaderInfo(~key="payment_methods", ~title="Payment Methods")
+  }
+}
+let connectorStatusColor = connectorStatus =>
+  switch connectorStatus->String.toLowerCase {
+  | "active" => TagBinding.Success
+  | _ => TagBinding.Neutral
+  }
+
+let getAllPaymentMethods = (paymentMethodsArray: array<paymentMethodEnabledTypeCommon>) => {
+  let paymentMethods = paymentMethodsArray->Array.reduce([], (acc, item) => {
+    acc->Array.concat([item.payment_method_type->LogicUtils.capitalizeString])
+  })
+  paymentMethods
+}
+let getTableCell = (~connectorType: connector=Processor) => {
+  let getCell = (connector: connectorPayloadCommonType, colType): Table.cell => {
+    switch colType {
+    | Name =>
+      CustomCell(
+        <HelperComponents.ConnectorCustomCell
+          connectorName=connector.connector_name connectorType
+        />,
+        "",
+      )
+    | Disabled =>
+      Label({
+        title: connector.disabled ? "DISABLED" : "ENABLED",
+        color: connector.disabled ? LabelGray : LabelGreen,
+      })
+
+    | Status =>
+      Table.CustomCell(
+        <TagBinding
+          text={connector.status->String.toUpperCase}
+          color={connector.status->connectorStatusColor}
+          variant=Subtle
+          shape=Squarical
+          size=Xs
+        />,
+        "",
+      )
+    | ProfileId => DisplayCopyCell(connector.profile_id)
+    | ProfileName =>
+      Table.CustomCell(
+        <HelperComponents.ProfileNameComponent profile_id={connector.profile_id} />,
+        "",
+      )
+    | ConnectorLabel => Text(connector.connector_label)
+    | Actions => Table.CustomCell(<div />, "")
+    | PaymentMethods =>
+      Table.CustomCell(
+        <div>
+          {connector.payment_methods_enabled
+          ->getAllPaymentMethods
+          ->Array.joinWith(", ")
+          ->React.string}
+        </div>,
+        "",
+      )
+    | MerchantConnectorId => DisplayCopyCell(connector.id)
+    }
+  }
+  getCell
+}
+
+let connectorEntity = (path: string, ~authorization: CommonAuthTypes.authorization) => {
+  EntityType.makeEntity(
+    ~uri=``,
+    ~getObjects=_ => [],
+    ~defaultColumns,
+    ~getHeading,
+    ~getCell=getTableCell(~connectorType=Processor),
+    ~dataKey="",
+    ~getShowLink={
+      connectorObj =>
+        GroupAccessUtils.linkForGetShowLinkViaAccess(
+          ~url=GlobalVars.appendDashboardPath(
+            ~url=`/${path}/${connectorObj.id}?name=${connectorObj.connector_name}`,
+          ),
+          ~authorization,
+        )
+    },
+  )
+}
