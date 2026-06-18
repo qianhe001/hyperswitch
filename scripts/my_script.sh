@@ -12,8 +12,8 @@ export HYPERSWITCH_CONTROL_CENTER_URL="http://localhost:9000"  # 即使未启动
 
 
 sudo docker compose -f docker-compose-superposition.yml up -d --pull never 
-sudo docker compose -f docker-compose-superposition.yml stop hyperswitch-web-sdk
-sudo docker compose -f docker-compose-superposition.yml rm hyperswitch-web-sdk
+sudo docker compose -f docker-compose-superposition.yml stop hyperswitch-control-center
+sudo docker compose -f docker-compose-superposition.yml rm hyperswitch-control-center
 sudo docker compose -f docker-compose-superposition.yml up -d --force-recreate --pull never hyperswitch-control-center
 sudo docker compose -f docker-compose-superposition.yml up -d --force-recreate --pull never hyperswitch-web-sdk
 sudo docker compose -f docker-compose-superposition.yml up --force-recreate --pull never hyperswitch-web-sdk
@@ -42,3 +42,5 @@ wasm-pack build \
 cd hyperswitch-control-center
 npm install
 npm run re:build
+
+configPath=/home/jiaozi/hyperswitch-main/config/dashboard.toml npm run start
