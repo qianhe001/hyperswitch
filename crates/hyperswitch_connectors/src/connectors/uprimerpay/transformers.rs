@@ -623,23 +623,21 @@ pub struct UprimerpayRefundData {
     pub error_message: Option<String>,
 }
 
-impl From<Option<UprimerpayPaymentStatus>> for enums::RefundStatus {
-    fn from(status: Option<UprimerpayPaymentStatus>) -> Self {
-        match status {
-            Some(UprimerpayPaymentStatus::Succeed) => Self::Success,
-            Some(
-                UprimerpayPaymentStatus::Failed
-                | UprimerpayPaymentStatus::Failure
-                | UprimerpayPaymentStatus::Declined
-                | UprimerpayPaymentStatus::Cancelled
-                | UprimerpayPaymentStatus::Canceled,
-            ) => Self::Failure,
-            Some(UprimerpayPaymentStatus::RequestCustomerAction)
-            | Some(UprimerpayPaymentStatus::Processing)
-            | Some(UprimerpayPaymentStatus::Pending)
-            | Some(UprimerpayPaymentStatus::Unknown)
-            | None => Self::Pending,
-        }
+fn get_refund_status(status: Option<UprimerpayPaymentStatus>) -> enums::RefundStatus {
+    match status {
+        Some(UprimerpayPaymentStatus::Succeed) => enums::RefundStatus::Success,
+        Some(
+            UprimerpayPaymentStatus::Failed
+            | UprimerpayPaymentStatus::Failure
+            | UprimerpayPaymentStatus::Declined
+            | UprimerpayPaymentStatus::Cancelled
+            | UprimerpayPaymentStatus::Canceled,
+        ) => enums::RefundStatus::Failure,
+        Some(UprimerpayPaymentStatus::RequestCustomerAction)
+        | Some(UprimerpayPaymentStatus::Processing)
+        | Some(UprimerpayPaymentStatus::Pending)
+        | Some(UprimerpayPaymentStatus::Unknown)
+        | None => enums::RefundStatus::Pending,
     }
 }
 
@@ -664,7 +662,7 @@ impl TryFrom<RefundsResponseRouterData<Execute, UprimerpayRefundResponse>>
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: refund_data.id.clone(),
-                refund_status: enums::RefundStatus::from(refund_data.status.clone()),
+                refund_status: get_refund_status(refund_data.status.clone()),
             }),
             ..item.data
         })
@@ -683,7 +681,7 @@ impl TryFrom<RefundsResponseRouterData<RSync, UprimerpayRefundResponse>>
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: refund_data.id.clone(),
-                refund_status: enums::RefundStatus::from(refund_data.status.clone()),
+                refund_status: get_refund_status(refund_data.status.clone()),
             }),
             ..item.data
         })

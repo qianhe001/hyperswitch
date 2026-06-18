@@ -16,12 +16,13 @@ use hyperswitch_domain_models::{
     router_data::{AccessToken, ConnectorAuthType, ErrorResponse, RouterData},
     router_flow_types::{
         access_token_auth::AccessTokenAuth,
-        payments::{Authorize, PSync, PaymentMethodToken, Session},
+        payments::{Authorize, Capture, PSync, PaymentMethodToken, Session, SetupMandate, Void},
         refunds::{Execute, RSync},
     },
     router_request_types::{
         AccessTokenRequestData, PaymentMethodTokenizationData, PaymentsAuthorizeData,
-        PaymentsSessionData, PaymentsSyncData, RefundsData,
+        PaymentsCancelData, PaymentsCaptureData, PaymentsSessionData, PaymentsSyncData,
+        RefundsData, SetupMandateRequestData,
     },
     router_response_types::{
         ConnectorInfo, PaymentMethodDetails, PaymentsResponseData, RefundsResponseData,
@@ -127,9 +128,10 @@ impl Uprimerpay {
     ) -> CustomResult<String, errors::ConnectorError> {
         let auth = uprimerpay::UprimerpayAuthType::try_from(auth_type)?;
         let signature_payload = format!("{}{}", body.get_inner_value().peek(), auth.secret_key.peek());
-        Ok(hex::encode(
-            crypto::Md5.generate_digest(signature_payload.as_bytes()),
-        ))
+        let digest = crypto::Md5
+            .generate_digest(signature_payload.as_bytes())
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        Ok(hex::encode(digest))
     }
 }
 
@@ -138,12 +140,24 @@ impl api::PaymentSession for Uprimerpay {}
 impl api::ConnectorAccessToken for Uprimerpay {}
 impl api::PaymentAuthorize for Uprimerpay {}
 impl api::PaymentSync for Uprimerpay {}
+impl api::PaymentCapture for Uprimerpay {}
+impl api::PaymentVoid for Uprimerpay {}
+impl api::MandateSetup for Uprimerpay {}
 impl api::Refund for Uprimerpay {}
 impl api::RefundExecute for Uprimerpay {}
 impl api::RefundSync for Uprimerpay {}
 impl api::PaymentToken for Uprimerpay {}
 
 impl ConnectorIntegration<PaymentMethodToken, PaymentMethodTokenizationData, PaymentsResponseData>
+    for Uprimerpay
+{
+}
+
+impl ConnectorIntegration<Capture, PaymentsCaptureData, PaymentsResponseData> for Uprimerpay {}
+
+impl ConnectorIntegration<Void, PaymentsCancelData, PaymentsResponseData> for Uprimerpay {}
+
+impl ConnectorIntegration<SetupMandate, SetupMandateRequestData, PaymentsResponseData>
     for Uprimerpay
 {
 }
