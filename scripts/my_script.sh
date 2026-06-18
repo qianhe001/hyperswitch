@@ -34,7 +34,7 @@ sudo apt update
 sudo apt install -y clang llvm lld pkg-config build-essential
 wasm-pack build \
   --target web \
-  --out-dir ./hyperswitch-control-center/public/hyperswitch/wasm \
+  --out-dir ~/hyperswitch-main/hyperswitch-control-center/public/hyperswitch/wasm \
   --out-name euclid \
   ./crates/euclid_wasm \
   -- --features dummy_connector,v1
