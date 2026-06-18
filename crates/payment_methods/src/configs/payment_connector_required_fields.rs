@@ -1756,6 +1756,24 @@ fn get_cards_required_fields() -> HashMap<Connector, RequiredFieldFinal> {
         ),
         (Connector::Tsys, fields(vec![], card_basic(), vec![])),
         (
+            Connector::Uprimerpay,
+            fields(
+                vec![],
+                vec![],
+                [
+                    card_basic(),
+                    full_name(),
+                    billing_email(),
+                    billing_address(),
+                    vec![
+                        RequiredField::BillingPhone,
+                        RequiredField::BillingPhoneCountryCode,
+                    ],
+                ]
+                .concat(),
+            ),
+        ),
+        (
             Connector::Wellsfargo,
             fields(
                 vec![],

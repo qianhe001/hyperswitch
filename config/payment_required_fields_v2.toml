@@ -461,6 +461,24 @@ non_mandate = [
   { required_field = "payment_method_data.card.card_cvc", display_name = "card_cvc", field_type = "user_card_cvc" }
 ]
 
+[required_fields.Card.Debit.fields.Uprimerpay]
+common = [
+  { required_field = "payment_method_data.card.card_number", display_name = "card_number", field_type = "user_card_number" },
+  { required_field = "payment_method_data.card.card_exp_month", display_name = "card_exp_month", field_type = "user_card_expiry_month" },
+  { required_field = "payment_method_data.card.card_exp_year", display_name = "card_exp_year", field_type = "user_card_expiry_year" },
+  { required_field = "payment_method_data.card.card_cvc", display_name = "card_cvc", field_type = "user_card_cvc" },
+  { required_field = "payment_method_data.billing.address.first_name", display_name = "card_holder_name", field_type = "user_full_name" },
+  { required_field = "payment_method_data.billing.address.last_name", display_name = "card_holder_name", field_type = "user_full_name" },
+  { required_field = "payment_method_data.billing.email", display_name = "email", field_type = "user_email_address" },
+  { required_field = "payment_method_data.billing.phone.number", display_name = "phone", field_type = "user_phone_number" },
+  { required_field = "payment_method_data.billing.phone.country_code", display_name = "dialing_code", field_type = "user_phone_number_country_code" },
+  { required_field = "payment_method_data.billing.address.line1", display_name = "line1", field_type = "user_address_line1" },
+  { required_field = "payment_method_data.billing.address.city", display_name = "city", field_type = "user_address_city" },
+  { required_field = "payment_method_data.billing.address.state", display_name = "state", field_type = "text" },
+  { required_field = "payment_method_data.billing.address.zip", display_name = "zip", field_type = "user_address_pincode" },
+  { required_field = "payment_method_data.billing.address.country", display_name = "country", field_type = "text" }
+]
+
 [required_fields.Card.Debit.fields.Wellsfargo]
 common = [
   { required_field = "payment_method_data.card.card_number", display_name = "card_number", field_type = "user_card_number" },
@@ -990,6 +1008,24 @@ non_mandate = [
   { required_field = "payment_method_data.card.card_exp_month", display_name = "card_exp_month", field_type = "user_card_expiry_month" },
   { required_field = "payment_method_data.card.card_exp_year", display_name = "card_exp_year", field_type = "user_card_expiry_year" },
   { required_field = "payment_method_data.card.card_cvc", display_name = "card_cvc", field_type = "user_card_cvc" }
+]
+
+[required_fields.Card.Credit.fields.Uprimerpay]
+common = [
+  { required_field = "payment_method_data.card.card_number", display_name = "card_number", field_type = "user_card_number" },
+  { required_field = "payment_method_data.card.card_exp_month", display_name = "card_exp_month", field_type = "user_card_expiry_month" },
+  { required_field = "payment_method_data.card.card_exp_year", display_name = "card_exp_year", field_type = "user_card_expiry_year" },
+  { required_field = "payment_method_data.card.card_cvc", display_name = "card_cvc", field_type = "user_card_cvc" },
+  { required_field = "payment_method_data.billing.address.first_name", display_name = "card_holder_name", field_type = "user_full_name" },
+  { required_field = "payment_method_data.billing.address.last_name", display_name = "card_holder_name", field_type = "user_full_name" },
+  { required_field = "payment_method_data.billing.email", display_name = "email", field_type = "user_email_address" },
+  { required_field = "payment_method_data.billing.phone.number", display_name = "phone", field_type = "user_phone_number" },
+  { required_field = "payment_method_data.billing.phone.country_code", display_name = "dialing_code", field_type = "user_phone_number_country_code" },
+  { required_field = "payment_method_data.billing.address.line1", display_name = "line1", field_type = "user_address_line1" },
+  { required_field = "payment_method_data.billing.address.city", display_name = "city", field_type = "user_address_city" },
+  { required_field = "payment_method_data.billing.address.state", display_name = "state", field_type = "text" },
+  { required_field = "payment_method_data.billing.address.zip", display_name = "zip", field_type = "user_address_pincode" },
+  { required_field = "payment_method_data.billing.address.country", display_name = "country", field_type = "text" }
 ]
 
 [required_fields.Card.Credit.fields.Wellsfargo]

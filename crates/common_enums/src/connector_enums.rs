@@ -190,6 +190,7 @@ pub enum Connector {
     Trustpay,
     Trustpayments,
     Tsys,
+    Uprimerpay,
     // UnifiedAuthenticationService,
     Vgs,
     Volt,
@@ -274,6 +275,7 @@ impl Connector {
                     PaymentMethod::BankRedirect | PaymentMethod::BankTransfer
                 )
                 | (Self::Tesouro, _)
+                | (Self::Uprimerpay, _)
                 | (Self::Iatapay, _)
                 | (Self::Volt, _)
                 | (Self::Itaubank, _)
@@ -411,6 +413,7 @@ impl Connector {
             | Self::Trustpayments
             // | Self::Tokenio
             | Self::Tsys
+            | Self::Uprimerpay
             // | Self::UnifiedAuthenticationService
             | Self::Vgs
             | Self::Volt

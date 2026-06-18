@@ -275,6 +275,7 @@ trustpay.base_url = "https://test-tpgw.trustpay.eu/"
 trustpayments.base_url = "https://webservices.securetrading.net/"
 trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 tsys.base_url = "https://stagegw.transnox.com/"
+uprimerpay.base_url = "https://uatacquire.cloudpnr.com/"
 unified_authentication_service.base_url = "http://localhost:8000"
 vgs.base_url = "https://{{vault_id}}.sandbox.vault-api.verygoodvault.com/"
 vgs.secondary_base_url = "https://auth.verygoodsecurity.com/"
@@ -395,6 +396,7 @@ cards = [
     "tokenio",
     "trustpay",
     "tsys",
+    "uprimerpay",
     "unified_authentication_service",
     "vgs",
     "volt",

@@ -166,6 +166,11 @@ api_key="device id"
 key1 = "transaction key"
 api_secret = "developer id"
 
+[uprimerpay]
+api_key = "app id"
+key1 = "access code"
+api_secret = "secret key"
+
 [globepay]
 api_key = "Partner code"
 key1 = "Credential code"

@@ -409,6 +409,9 @@ impl FeatureMatrixConnectorData {
                     connector::Trustpayments::new(),
                 ))),
                 enums::Connector::Tsys => Ok(ConnectorEnum::Old(Box::new(connector::Tsys::new()))),
+                enums::Connector::Uprimerpay => {
+                    Ok(ConnectorEnum::Old(Box::new(connector::Uprimerpay::new())))
+                },
                 // enums::Connector::UnifiedAuthenticationService => Ok(ConnectorEnum::Old(Box::new(
                 //     connector::UnifiedAuthenticationService,
                 // ))),

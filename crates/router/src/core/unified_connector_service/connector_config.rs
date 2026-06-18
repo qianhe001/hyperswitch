@@ -416,6 +416,12 @@ pub enum ConnectorSpecificConfig {
         transaction_key: Secret<String>,
         developer_id: Secret<String>,
     },
+    /// UprimerPay connector configuration
+    Uprimerpay {
+        app_id: Secret<String>,
+        access_code: Secret<String>,
+        secret_key: Secret<String>,
+    },
     /// Bamboraapac connector configuration
     Bamboraapac {
         username: Secret<String>,
@@ -1236,6 +1242,18 @@ impl ForeignTryFrom<(Connector, &ConnectorAuthType, Option<&serde_json::Value>)>
                     developer_id: api_secret.clone(),
                 }),
                 _ => Err(err("Tsys requires SignatureKey auth type")),
+            },
+            Connector::Uprimerpay => match auth {
+                ConnectorAuthType::SignatureKey {
+                    api_key,
+                    key1,
+                    api_secret,
+                } => Ok(Self::Uprimerpay {
+                    app_id: api_key.clone(),
+                    access_code: key1.clone(),
+                    secret_key: api_secret.clone(),
+                }),
+                _ => Err(err("UprimerPay requires SignatureKey auth type")),
             },
             Connector::Wellsfargo => match auth {
                 ConnectorAuthType::SignatureKey {

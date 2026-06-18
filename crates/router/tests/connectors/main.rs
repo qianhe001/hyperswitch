@@ -132,6 +132,7 @@ mod trustly;
 mod trustpay;
 mod trustpayments;
 mod tsys;
+mod uprimerpay;
 mod unified_authentication_service;
 mod utils;
 mod vgs;

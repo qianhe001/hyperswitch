@@ -144,6 +144,7 @@ pub struct ConnectorAuthentication {
     pub trustpay: Option<SignatureKey>,
     pub trustpayments: Option<HeaderKey>,
     pub tsys: Option<SignatureKey>,
+    pub uprimerpay: Option<SignatureKey>,
     pub unified_authentication_service: Option<HeaderKey>,
     pub vgs: Option<SignatureKey>,
     pub volt: Option<HeaderKey>,

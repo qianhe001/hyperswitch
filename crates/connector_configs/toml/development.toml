@@ -5315,6 +5315,20 @@ api_secret="Developer Id"
 [tsys.connector_webhook_details]
 merchant_secret="Source verification key"
 
+[uprimerpay]
+[[uprimerpay.credit]]
+  payment_method_type = "Mastercard"
+[[uprimerpay.credit]]
+  payment_method_type = "Visa"
+[[uprimerpay.debit]]
+  payment_method_type = "Mastercard"
+[[uprimerpay.debit]]
+  payment_method_type = "Visa"
+[uprimerpay.connector_auth.SignatureKey]
+api_key="App ID"
+key1="Access Code"
+api_secret="Secret Key"
+
 [volt]
 [[volt.bank_redirect]]
   payment_method_type = "open_banking_uk"

@@ -574,6 +574,10 @@ impl ConnectorAuthTypeAndMetadataValidation<'_> {
                 tsys::transformers::TsysAuthType::try_from(self.auth_type)?;
                 Ok(())
             }
+            api_enums::Connector::Uprimerpay => {
+                uprimerpay::transformers::UprimerpayAuthType::try_from(self.auth_type)?;
+                Ok(())
+            }
             api_enums::Connector::Volt => {
                 volt::transformers::VoltAuthType::try_from(self.auth_type)?;
                 Ok(())
