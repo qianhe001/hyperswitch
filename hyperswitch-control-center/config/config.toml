@@ -1,5 +1,5 @@
 [default.endpoints]
-api_url="http://192.168.1.69:9000/api"
+api_url="http://192.168.1.69:9000"
 sdk_url="http://192.168.1.69:9050/HyperLoader.js"
 apple_pay_certificate_url=""
 dss_certificate_url=""
