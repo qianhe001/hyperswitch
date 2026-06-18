@@ -188,6 +188,7 @@ let connectorList: array<connectorTypes> = [
   Processors(TRUSTLY),
   Processors(IMERCHANTSOLUTIONS),
   Processors(PAYCONEX),
+  Processors(UPRIMERPAY),
 ]
 
 let connectorListForLive: array<connectorTypes> = [
@@ -235,6 +236,7 @@ let connectorListForLive: array<connectorTypes> = [
   Processors(WORLDPAYMODULAR),
   Processors(PAYJUSTNOW),
   Processors(PAYJUSTNOWINSTORE),
+  Processors(UPRIMERPAY),
 ]
 
 let connectorListWithAutomaticFlow = [PAYPAL]
@@ -735,6 +737,10 @@ let payconexInfo = {
   description: "PayConex is Bluefin's payment gateway platform, offering secure card payment processing with PCI-validated point-to-point encryption and tokenization.",
 }
 
+let uprimerpayInfo = {
+  description: "UprimerPay is a payment processor that enables merchants to accept secure online card payments with authorization, synchronization, and refund support.",
+}
+
 let signifydInfo = {
   description: "One platform to protect the entire shopper journey end-to-end",
   validate: [
@@ -1019,6 +1025,7 @@ let getConnectorNameString = (connector: processorTypes) =>
   | TRUSTLY => "trustly"
   | IMERCHANTSOLUTIONS => "imerchantsolutions"
   | PAYCONEX => "payconex"
+  | UPRIMERPAY => "uprimerpay"
   }
 
 let getPayoutProcessorNameString = (payoutProcessor: payoutProcessorTypes) =>
@@ -1229,6 +1236,7 @@ let getConnectorNameTypeFromString = (connector, ~connectorType=ConnectorTypes.P
     | "trustly" => Processors(TRUSTLY)
     | "imerchantsolutions" => Processors(IMERCHANTSOLUTIONS)
     | "payconex" => Processors(PAYCONEX)
+    | "uprimerpay" => Processors(UPRIMERPAY)
     | _ => UnknownConnector("Not known")
     }
   | PayoutProcessor =>
@@ -1415,6 +1423,7 @@ let getProcessorInfo = (connector: ConnectorTypes.processorTypes) => {
   | TRUSTLY => trustlyInfo
   | IMERCHANTSOLUTIONS => imerchantsolutionsInfo
   | PAYCONEX => payconexInfo
+  | UPRIMERPAY => uprimerpayInfo
   }
 }
 
@@ -2407,6 +2416,7 @@ let getDisplayNameForProcessor = (connector: ConnectorTypes.processorTypes) =>
   | TRUSTLY => "Trustly"
   | IMERCHANTSOLUTIONS => "iMerchant Solutions"
   | PAYCONEX => "PayConex"
+  | UPRIMERPAY => "UprimerPay"
   }
 
 let getDisplayNameForPayoutProcessor = (payoutProcessor: ConnectorTypes.payoutProcessorTypes) =>

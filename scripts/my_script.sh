@@ -25,3 +25,20 @@ cargo run -j 1
 访问控制中心: http://192.168.1.69:9000/dashboard/home
 
 #lock服务https://github.com/juspay/hyperswitch-card-vault/blob/main/docs/guides/setup.md
+
+
+编译controller-center
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack
+sudo apt update
+sudo apt install -y clang llvm lld pkg-config build-essential
+wasm-pack build \
+  --target web \
+  --out-dir ./hyperswitch-control-center/public/hyperswitch/wasm \
+  --out-name euclid \
+  ./crates/euclid_wasm \
+  -- --features dummy_connector,v1
+
+cd hyperswitch-control-center
+npm install
+npm run re:build

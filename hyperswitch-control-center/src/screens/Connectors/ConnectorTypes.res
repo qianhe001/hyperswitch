@@ -142,6 +142,7 @@ type processorTypes =
   | TRUSTLY
   | IMERCHANTSOLUTIONS
   | PAYCONEX
+  | UPRIMERPAY
 
 type payoutProcessorTypes =
   | ADYEN
