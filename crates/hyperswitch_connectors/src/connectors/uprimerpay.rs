@@ -10,7 +10,7 @@ use common_enums::enums;
 use common_utils::{
     crypto::{self, GenerateDigest},
     errors::CustomResult,
-    ext_traits::{BytesExt, ValueExt},
+    ext_traits::{ByteSliceExt, BytesExt, ValueExt},
     request::{Method, Request, RequestBuilder, RequestContent},
     types::{AmountConvertor, MinorUnit, MinorUnitForConnector},
 };
@@ -272,7 +272,7 @@ impl ConnectorValidation for Uprimerpay {
     ) -> CustomResult<(), errors::ConnectorError> {
         match capture_method.unwrap_or_default() {
             enums::CaptureMethod::Automatic | enums::CaptureMethod::SequentialAutomatic => Ok(()),
-            capture_method => Err(crate::utils::construct_not_supported_error_report(
+            capture_method => Err(utils::construct_not_supported_error_report(
                 capture_method,
                 self.id(),
             )),
@@ -679,7 +679,7 @@ impl IncomingWebhook for Uprimerpay {
         request: &IncomingWebhookRequestDetails<'_>,
         _merchant_id: &common_utils::id_type::MerchantId,
         _connector_webhook_details: Option<common_utils::pii::SecretSerdeValue>,
-        connector_account_details: common_utils::crypto::Encryptable<
+        connector_account_details: crypto::Encryptable<
             hyperswitch_masking::Secret<serde_json::Value>,
         >,
         _connector_name: &str,
@@ -838,7 +838,7 @@ impl IncomingWebhook for Uprimerpay {
         _request: &IncomingWebhookRequestDetails<'_>,
         _error_kind: Option<IncomingWebhookFlowError>,
         _connector_authentication_type: Option<
-            common_utils::crypto::Encryptable<hyperswitch_masking::Secret<serde_json::Value>>,
+            crypto::Encryptable<hyperswitch_masking::Secret<serde_json::Value>>,
         >,
     ) -> CustomResult<ApplicationResponse<serde_json::Value>, errors::ConnectorError> {
         Ok(ApplicationResponse::TextPlain("SUCCESS".to_string()))
