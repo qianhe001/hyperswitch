@@ -26,7 +26,7 @@ import com.acquire.sdk.core.Request;
 public class ReceiveHuifuNotifyController extends Request{
 	
 	// private Request request = new Request();
-	
+	//https://uprimer.net/open/docs/api#/icc_transaction_result_notified
     @PostMapping("/receive")
     @ResponseBody
 	public String test(HttpServletRequest httpRequest) throws Exception{

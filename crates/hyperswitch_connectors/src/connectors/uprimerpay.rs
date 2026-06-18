@@ -2,17 +2,21 @@ pub mod transformers;
 
 use std::sync::LazyLock;
 
-use api_models::webhooks::{IncomingWebhookEvent, ObjectReferenceId};
+use api_models::{
+    payments::PaymentIdType,
+    webhooks::{IncomingWebhookEvent, ObjectReferenceId, RefundIdType},
+};
 use common_enums::enums;
 use common_utils::{
     crypto::{self, GenerateDigest},
     errors::CustomResult,
-    ext_traits::BytesExt,
+    ext_traits::{BytesExt, ValueExt},
     request::{Method, Request, RequestBuilder, RequestContent},
     types::{AmountConvertor, MinorUnit, MinorUnitForConnector},
 };
-use error_stack::{report, ResultExt};
+use error_stack::ResultExt;
 use hyperswitch_domain_models::{
+    api::ApplicationResponse,
     router_data::{AccessToken, ConnectorAuthType, ErrorResponse, RouterData},
     router_flow_types::{
         access_token_auth::AccessTokenAuth,
@@ -43,7 +47,9 @@ use hyperswitch_interfaces::{
     errors,
     events::connector_api_logs::ConnectorEvent,
     types::{self, Response},
-    webhooks::{IncomingWebhook, IncomingWebhookRequestDetails, WebhookContext},
+    webhooks::{
+        IncomingWebhook, IncomingWebhookFlowError, IncomingWebhookRequestDetails, WebhookContext,
+    },
 };
 use hyperswitch_masking::{ExposeInterface, Mask, PeekInterface};
 use transformers as uprimerpay;
@@ -51,7 +57,7 @@ use transformers as uprimerpay;
 use crate::{
     constants::headers,
     types::ResponseRouterData,
-    utils::{convert_amount, RefundsRequestData},
+    utils::{self, convert_amount, RefundsRequestData},
 };
 
 const X_ACCESS_CODE: &str = "X-AccessCode";
@@ -281,6 +287,10 @@ impl ConnectorValidation for Uprimerpay {
         _connector_meta_data: Option<common_utils::pii::SecretSerdeValue>,
     ) -> CustomResult<(), errors::ConnectorError> {
         Ok(())
+    }
+
+    fn is_webhook_source_verification_mandatory(&self) -> bool {
+        true
     }
 }
 
@@ -664,27 +674,174 @@ impl ConnectorIntegration<RSync, RefundsData, RefundsResponseData> for Uprimerpa
 
 #[async_trait::async_trait]
 impl IncomingWebhook for Uprimerpay {
+    async fn verify_webhook_source(
+        &self,
+        request: &IncomingWebhookRequestDetails<'_>,
+        _merchant_id: &common_utils::id_type::MerchantId,
+        _connector_webhook_details: Option<common_utils::pii::SecretSerdeValue>,
+        connector_account_details: common_utils::crypto::Encryptable<
+            hyperswitch_masking::Secret<serde_json::Value>,
+        >,
+        _connector_name: &str,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        let connector_account_details = connector_account_details
+            .parse_value::<ConnectorAuthType>("ConnectorAuthType")
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        let auth = uprimerpay::UprimerpayAuthType::try_from(&connector_account_details)?;
+        let signature = utils::get_header_key_value(X_SIGNATURE, request.headers)
+            .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
+        let mut signature_payload = request.body.to_vec();
+        signature_payload.extend_from_slice(auth.secret_key.peek().as_bytes());
+        let digest = crypto::Md5
+            .generate_digest(&signature_payload)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        Ok(hex::encode(digest).eq_ignore_ascii_case(signature))
+    }
+
     fn get_webhook_object_reference_id(
         &self,
-        _request: &IncomingWebhookRequestDetails<'_>,
+        request: &IncomingWebhookRequestDetails<'_>,
     ) -> CustomResult<ObjectReferenceId, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::WebhooksNotImplemented))
+        let notification: uprimerpay::UprimerpayWebhookNotification = request
+            .body
+            .parse_struct("UprimerpayWebhookNotification")
+            .change_context(errors::ConnectorError::WebhookReferenceIdNotFound)?;
+
+        if notification.is_refund_event() {
+            Ok(ObjectReferenceId::RefundId(RefundIdType::RefundId(
+                notification.merchant_order_id,
+            )))
+        } else {
+            Ok(ObjectReferenceId::PaymentId(
+                PaymentIdType::ConnectorTransactionId(
+                    notification.original_id.unwrap_or(notification.id),
+                ),
+            ))
+        }
     }
 
     fn get_webhook_event_type(
         &self,
-        _request: &IncomingWebhookRequestDetails<'_>,
+        request: &IncomingWebhookRequestDetails<'_>,
         _context: Option<&WebhookContext>,
     ) -> CustomResult<IncomingWebhookEvent, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::WebhooksNotImplemented))
+        let notification: uprimerpay::UprimerpayWebhookNotification = request
+            .body
+            .parse_struct("UprimerpayWebhookNotification")
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+
+        let event = match notification.transaction_type {
+            uprimerpay::UprimerpayWebhookTransactionType::Refund => match notification.status {
+                uprimerpay::UprimerpayPaymentStatus::Succeed => IncomingWebhookEvent::RefundSuccess,
+                uprimerpay::UprimerpayPaymentStatus::Failed
+                | uprimerpay::UprimerpayPaymentStatus::Failure
+                | uprimerpay::UprimerpayPaymentStatus::Declined
+                | uprimerpay::UprimerpayPaymentStatus::Cancelled
+                | uprimerpay::UprimerpayPaymentStatus::Canceled => {
+                    IncomingWebhookEvent::RefundFailure
+                }
+                uprimerpay::UprimerpayPaymentStatus::Pending
+                | uprimerpay::UprimerpayPaymentStatus::Processing
+                | uprimerpay::UprimerpayPaymentStatus::RetryPending
+                | uprimerpay::UprimerpayPaymentStatus::RequestCustomerAction
+                | uprimerpay::UprimerpayPaymentStatus::Unknown => {
+                    IncomingWebhookEvent::EventNotSupported
+                }
+            },
+            uprimerpay::UprimerpayWebhookTransactionType::Authorize => match notification.status {
+                uprimerpay::UprimerpayPaymentStatus::Succeed => {
+                    IncomingWebhookEvent::PaymentIntentAuthorizationSuccess
+                }
+                uprimerpay::UprimerpayPaymentStatus::Failed
+                | uprimerpay::UprimerpayPaymentStatus::Failure
+                | uprimerpay::UprimerpayPaymentStatus::Declined
+                | uprimerpay::UprimerpayPaymentStatus::Cancelled
+                | uprimerpay::UprimerpayPaymentStatus::Canceled => {
+                    IncomingWebhookEvent::PaymentIntentAuthorizationFailure
+                }
+                uprimerpay::UprimerpayPaymentStatus::Pending
+                | uprimerpay::UprimerpayPaymentStatus::Processing
+                | uprimerpay::UprimerpayPaymentStatus::RetryPending
+                | uprimerpay::UprimerpayPaymentStatus::RequestCustomerAction => {
+                    IncomingWebhookEvent::PaymentIntentProcessing
+                }
+                uprimerpay::UprimerpayPaymentStatus::Unknown => {
+                    IncomingWebhookEvent::EventNotSupported
+                }
+            },
+            uprimerpay::UprimerpayWebhookTransactionType::Capture => match notification.status {
+                uprimerpay::UprimerpayPaymentStatus::Succeed => {
+                    IncomingWebhookEvent::PaymentIntentCaptureSuccess
+                }
+                uprimerpay::UprimerpayPaymentStatus::Failed
+                | uprimerpay::UprimerpayPaymentStatus::Failure
+                | uprimerpay::UprimerpayPaymentStatus::Declined
+                | uprimerpay::UprimerpayPaymentStatus::Cancelled
+                | uprimerpay::UprimerpayPaymentStatus::Canceled => {
+                    IncomingWebhookEvent::PaymentIntentCaptureFailure
+                }
+                uprimerpay::UprimerpayPaymentStatus::Pending
+                | uprimerpay::UprimerpayPaymentStatus::Processing
+                | uprimerpay::UprimerpayPaymentStatus::RetryPending
+                | uprimerpay::UprimerpayPaymentStatus::RequestCustomerAction => {
+                    IncomingWebhookEvent::PaymentIntentProcessing
+                }
+                uprimerpay::UprimerpayPaymentStatus::Unknown => {
+                    IncomingWebhookEvent::EventNotSupported
+                }
+            },
+            uprimerpay::UprimerpayWebhookTransactionType::Sale => match notification.status {
+                uprimerpay::UprimerpayPaymentStatus::Succeed => {
+                    IncomingWebhookEvent::PaymentIntentSuccess
+                }
+                uprimerpay::UprimerpayPaymentStatus::Failed
+                | uprimerpay::UprimerpayPaymentStatus::Failure
+                | uprimerpay::UprimerpayPaymentStatus::Declined
+                | uprimerpay::UprimerpayPaymentStatus::Cancelled
+                | uprimerpay::UprimerpayPaymentStatus::Canceled => {
+                    IncomingWebhookEvent::PaymentIntentFailure
+                }
+                uprimerpay::UprimerpayPaymentStatus::Pending
+                | uprimerpay::UprimerpayPaymentStatus::Processing
+                | uprimerpay::UprimerpayPaymentStatus::RetryPending
+                | uprimerpay::UprimerpayPaymentStatus::RequestCustomerAction => {
+                    IncomingWebhookEvent::PaymentIntentProcessing
+                }
+                uprimerpay::UprimerpayPaymentStatus::Unknown => {
+                    IncomingWebhookEvent::EventNotSupported
+                }
+            },
+            uprimerpay::UprimerpayWebhookTransactionType::Unknown => {
+                IncomingWebhookEvent::EventNotSupported
+            }
+        };
+
+        Ok(event)
     }
 
     fn get_webhook_resource_object(
         &self,
-        _request: &IncomingWebhookRequestDetails<'_>,
+        request: &IncomingWebhookRequestDetails<'_>,
     ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, errors::ConnectorError>
     {
-        Err(report!(errors::ConnectorError::WebhooksNotImplemented))
+        let notification: uprimerpay::UprimerpayWebhookNotification = request
+            .body
+            .parse_struct("UprimerpayWebhookNotification")
+            .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
+
+        Ok(Box::new(notification))
+    }
+
+    fn get_webhook_api_response(
+        &self,
+        _request: &IncomingWebhookRequestDetails<'_>,
+        _error_kind: Option<IncomingWebhookFlowError>,
+        _connector_authentication_type: Option<
+            common_utils::crypto::Encryptable<hyperswitch_masking::Secret<serde_json::Value>>,
+        >,
+    ) -> CustomResult<ApplicationResponse<serde_json::Value>, errors::ConnectorError> {
+        Ok(ApplicationResponse::TextPlain("SUCCESS".to_string()))
     }
 }
 
@@ -735,7 +892,8 @@ static UPRIMERPAY_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     integration_status: enums::ConnectorIntegrationStatus::Sandbox,
 };
 
-static UPRIMERPAY_SUPPORTED_WEBHOOK_FLOWS: [enums::EventClass; 0] = [];
+static UPRIMERPAY_SUPPORTED_WEBHOOK_FLOWS: [enums::EventClass; 2] =
+    [enums::EventClass::Payments, enums::EventClass::Refunds];
 
 impl ConnectorSpecifications for Uprimerpay {
     fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {

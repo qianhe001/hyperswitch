@@ -46,9 +46,9 @@ impl<T> From<(MinorUnit, T)> for UprimerpayRouterData<T> {
 }
 
 pub struct UprimerpayAuthType {
-    pub(super) app_id: Secret<String>,
-    pub(super) access_code: Secret<String>,
-    pub(super) secret_key: Secret<String>,
+    pub app_id: Secret<String>,
+    pub access_code: Secret<String>,
+    pub secret_key: Secret<String>,
 }
 
 impl TryFrom<&ConnectorAuthType> for UprimerpayAuthType {
@@ -425,6 +425,7 @@ pub enum UprimerpayPaymentStatus {
     RequestCustomerAction,
     Processing,
     Pending,
+    RetryPending,
     Failed,
     Failure,
     Declined,
@@ -432,6 +433,61 @@ pub enum UprimerpayPaymentStatus {
     Canceled,
     #[serde(other)]
     Unknown,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum UprimerpayWebhookTransactionType {
+    Sale,
+    Refund,
+    Authorize,
+    Capture,
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UprimerpayWebhookNotification {
+    pub request_id: String,
+    pub app_id: String,
+    pub merchant_order_id: String,
+    pub amount: MinorUnit,
+    pub currency: enums::Currency,
+    pub captured_amount: Option<MinorUnit>,
+    pub id: String,
+    pub transaction_type: UprimerpayWebhookTransactionType,
+    pub status: UprimerpayPaymentStatus,
+    pub payment_method: String,
+    pub payment_acceptance: Option<String>,
+    pub merchant_memo: Option<String>,
+    pub error_code: Option<String>,
+    #[serde(alias = "errorMsg")]
+    pub error_message: Option<String>,
+    pub create_time: Option<String>,
+    pub update_time: Option<String>,
+    pub raw_code: Option<String>,
+    pub raw_refusal_description: Option<String>,
+    pub auth_code: Option<String>,
+    pub short_card_no: Option<String>,
+    pub country_code: Option<String>,
+    pub eci: Option<String>,
+    #[serde(rename = "threeDS")]
+    pub three_ds: Option<String>,
+    pub subscription_request_id: Option<String>,
+    pub subscription_id: Option<String>,
+    pub period_num: Option<i64>,
+    pub cancellation_reason: Option<String>,
+    pub original_id: Option<String>,
+    pub refund_reason: Option<String>,
+    pub retry_code: Option<String>,
+    pub retry_msg: Option<String>,
+}
+
+impl UprimerpayWebhookNotification {
+    pub fn is_refund_event(&self) -> bool {
+        matches!(self.transaction_type, UprimerpayWebhookTransactionType::Refund)
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -455,9 +511,9 @@ impl From<UprimerpayPaymentStatus> for enums::AttemptStatus {
         match status {
             UprimerpayPaymentStatus::Succeed => Self::Charged,
             UprimerpayPaymentStatus::RequestCustomerAction => Self::AuthenticationPending,
-            UprimerpayPaymentStatus::Processing | UprimerpayPaymentStatus::Pending => {
-                Self::Authorizing
-            }
+            UprimerpayPaymentStatus::Processing
+            | UprimerpayPaymentStatus::Pending
+            | UprimerpayPaymentStatus::RetryPending => Self::Authorizing,
             UprimerpayPaymentStatus::Failed
             | UprimerpayPaymentStatus::Failure
             | UprimerpayPaymentStatus::Declined
@@ -635,6 +691,7 @@ fn get_refund_status(status: Option<UprimerpayPaymentStatus>) -> enums::RefundSt
         Some(UprimerpayPaymentStatus::RequestCustomerAction)
         | Some(UprimerpayPaymentStatus::Processing)
         | Some(UprimerpayPaymentStatus::Pending)
+        | Some(UprimerpayPaymentStatus::RetryPending)
         | Some(UprimerpayPaymentStatus::Unknown)
         | None => enums::RefundStatus::Pending,
     }
