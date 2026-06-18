@@ -3,7 +3,7 @@ use common_utils::{pii::Email, types::MinorUnit};
 use error_stack::ResultExt;
 use hyperswitch_domain_models::{
     payment_method_data::{Card, PaymentMethodData},
-    router_data::{AccessToken, ConnectorAuthType, RouterData},
+    router_data::{AccessToken, ConnectorAuthType},
     router_flow_types::access_token_auth::AccessTokenAuth,
     router_flow_types::refunds::{Execute, RSync},
     router_request_types::{AccessTokenRequestData, ResponseId},
@@ -14,7 +14,7 @@ use hyperswitch_domain_models::{
     },
 };
 use hyperswitch_interfaces::errors;
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -23,8 +23,7 @@ use crate::{
         ResponseRouterData,
     },
     utils::{
-        self, CardData, PaymentsAuthorizeRequestData, RefundsRequestData,
-        RouterData as RouterDataUtils,
+        self, CardData, PaymentsAuthorizeRequestData, RouterData as RouterDataUtils,
     },
 };
 
