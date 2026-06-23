@@ -1,0 +1,109 @@
+{
+  "name": "orca-payment-page",
+  "version": "0.132.0",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "@glennsl/rescript-fetch": "^0.2.0",
+    "@rescript/core": "^1.6.1",
+    "@rescript/react": "^0.13.1",
+    "@sentry/react": "^9.9.0",
+    "@sentry/webpack-plugin": "^3.2.2",
+    "react": "^18.2.0",
+    "react-datepicker": "^8.4.0",
+    "react-dom": "^18.2.0",
+    "react-final-form": "^7.0.0",
+    "recoil": "^0.7.7",
+    "webpack-merge": "^6.0.1"
+  },
+  "scripts": {
+    "pre-commit": "bash .githooks/commit-msg",
+    "build": "NODE_ENV=production webpack --config webpack.common.js",
+    "build:v2": "cross-env NODE_ENV=production SDK_VERSION=v2 webpack --config webpack.common.js",
+    "build:integ": "cross-env NODE_ENV=production sdkEnv=integ webpack --config webpack.common.js",
+    "build:playground": "npm run setup:playground && webpack --config webpack.common.js",
+    "build:sandbox": "cross-env NODE_ENV=production sdkEnv=sandbox webpack --config webpack.common.js",
+    "build:prod": "cross-env NODE_ENV=production sdkEnv=prod webpack --config webpack.common.js",
+    "build:prod:eu": "cross-env NODE_ENV=production sdkEnv=prod HYPERSWITCH_STACK=eu webpack --config webpack.common.js",
+    "build:integ:v2": "cross-env NODE_ENV=production sdkEnv=integ SDK_VERSION=v2 webpack --config webpack.common.js",
+    "build:sandbox:v2": "cross-env NODE_ENV=production sdkEnv=sandbox SDK_VERSION=v2 webpack --config webpack.common.js",
+    "build:prod:v2": "cross-env NODE_ENV=production sdkEnv=prod SDK_VERSION=v2 webpack --config webpack.common.js",
+    "build:prod:eu:v2": "cross-env NODE_ENV=production sdkEnv=prod HYPERSWITCH_STACK=eu SDK_VERSION=v2 webpack --config webpack.common.js",
+    "deploy-to-s3": "node ./scripts/pushToS3.js",
+    "setup:hooks": "git config core.hooksPath .githooks && chmod +x .githooks/commit-msg",
+    "setup:submodules": "git submodule update --init --recursive",
+    "setup:playground": "cd Hyperswitch-React-Demo-App && npm i",
+    "postinstall": "npm run setup:hooks && npm run update:submodules && npm run setup:playground",
+    "update:submodules": "bash ./scripts/update-submodules.sh",
+    "re:build": "rescript",
+    "re:clean": "rescript clean",
+    "re:format": "rescript format -all",
+    "re:start": "rescript -w",
+    "start": "npm run update:submodules && cross-env sdkEnv=local webpack serve --config webpack.dev.js",
+    "start:playground": "npm run setup:playground && npm run start",
+    "test": "cd cypress-tests && npm run cypress:run",
+    "test:hooks": "eslint src/"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run pre-commit"
+    }
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/preset-env": "^7.25.3",
+    "@babel/preset-react": "^7.24.7",
+    "autoprefixer": "^10.4.8",
+    "babel-loader": "^10.0.0",
+    "babel-plugin-add-react-displayname": "^0.0.5",
+    "copy-webpack-plugin": "^13.0.0",
+    "cross-env": "^7.0.3",
+    "css-loader": "^7.1.2",
+    "cz-conventional-changelog": "^3.3.0",
+    "eslint": "^9.29.0",
+    "eslint-plugin-promise": "^7.2.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "html-webpack-plugin": "^5.6.0",
+    "husky": "^9.1.7",
+    "mini-css-extract-plugin": "^2.9.2",
+    "postcss": "^8.4.16",
+    "postcss-loader": "^8.1.1",
+    "rescript": "^11.1.0",
+    "tailwindcss": "^3.1.8",
+    "terser-webpack-plugin": "^5.3.10",
+    "webpack": "^5.94.0",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.1.0",
+    "webpack-subresource-integrity": "^5.2.0-rc.1"
+  },
+  "release": {
+    "branches": [
+      "main",
+      {
+        "name": "release-[0-9]+",
+        "prerelease": true
+      }
+    ],
+    "repositoryUrl": "https://github.com/juspay/hyperswitch-web.git"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}

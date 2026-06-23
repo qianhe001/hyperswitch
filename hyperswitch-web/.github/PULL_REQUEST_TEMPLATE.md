@@ -1,0 +1,30 @@
+## Type of Change
+
+<!-- Put an `x` in the boxes that apply -->
+
+- [ ] Bugfix
+- [ ] New feature
+- [ ] Enhancement
+- [ ] Refactoring
+- [ ] Dependency updates
+- [ ] Documentation
+- [ ] CI/CD
+
+## Description
+
+<!-- Describe your changes in detail -->
+
+## How did you test it?
+
+<!--
+Did you write an integration/unit/API test to verify the code changes?
+Or did you test this change manually (provide relevant screenshots)?
+-->
+
+## Checklist
+
+<!-- Put an `x` in the boxes that apply -->
+
+- [ ] I ran `npm run re:build`
+- [ ] I reviewed submitted code
+- [ ] I added unit tests for my changes where possible

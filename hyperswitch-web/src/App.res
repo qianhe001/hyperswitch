@@ -1,0 +1,160 @@
+@react.component
+let make = () => {
+  open CardUtils
+
+  let url = RescriptReactRouter.useUrl()
+  let (integrateError, setIntegrateErrorError) = React.useState(() => false)
+  let setLoggerState = Recoil.useSetRecoilState(RecoilAtoms.loggerAtom)
+
+  let paymentMode = getQueryParamsDictforKey(url.search, "componentName")
+  let paymentType = paymentMode->CardThemeType.getPaymentMode
+
+  let networkStatus = NetworkInformation.useNetworkInformation()
+  let (logger, initTimestamp) = React.useMemo0(() => {
+    (HyperLogger.make(~source=Elements(paymentType)), Date.now())
+  })
+
+  React.useEffect1(() => {
+    switch networkStatus {
+    | Value(val) =>
+      logger.setLogInfo(
+        ~value=val->Identity.anyTypeToJson->JSON.stringify,
+        ~eventName=NETWORK_STATE,
+        ~logType=DEBUG,
+      )
+    | NOT_AVAILABLE => ()
+    }
+
+    None
+  }, [networkStatus])
+
+  let fullscreenMode = getQueryParamsDictforKey(url.search, "fullscreenType")
+
+  React.useEffect(() => {
+    setLoggerState(_ => logger)
+    None
+  }, [logger])
+
+  React.useEffect0(() => {
+    let handleMetaDataPostMessage = (ev: Window.event) => {
+      let json = ev.data->Utils.safeParse
+      let dict = json->Utils.getDictFromJson
+
+      if dict->Dict.get("metadata")->Option.isSome {
+        let metadata = dict->Utils.getJsonObjectFromDict("metadata")
+        let config = metadata->Utils.getDictFromJson->Dict.get("config")
+
+        switch config {
+        | Some(config) => {
+            let config = CardTheme.itemToObjMapper(
+              config->Utils.getDictFromJson,
+              DefaultTheme.default,
+              DefaultTheme.defaultRules,
+              logger,
+            )
+
+            generateFontsLink(config.fonts)
+            let dict = config.appearance.rules->Utils.getDictFromJson
+            if dict->Dict.toArray->Array.length > 0 {
+              Utils.generateStyleSheet("", dict, "mystyle")
+            }
+          }
+        | None => ()
+        }
+      }
+
+      let appearanceJson = if dict->Utils.getDictIsSome("paymentElementCreate") {
+        dict->Utils.getDictFromObj("paymentOptions")->Dict.get("appearance")
+      } else if dict->Utils.getDictIsSome("fullScreenIframeMounted") {
+        dict->Dict.get("appearance")
+      } else if dict->Utils.getDictIsSome("ElementsUpdate") {
+        dict->Utils.getDictFromObj("options")->Dict.get("appearance")
+      } else {
+        None
+      }
+
+      switch appearanceJson {
+      | Some(appearanceJson) =>
+        let colorScheme =
+          appearanceJson
+          ->Utils.getDictFromJson
+          ->Utils.getString("colorScheme", "light")
+          ->CardTheme.getColorScheme
+        CardTheme.setColorSchemeMeta(colorScheme)
+      | None => ()
+      }
+    }
+    Window.addEventListener("message", handleMetaDataPostMessage)
+    Some(() => Window.removeEventListener("message", handleMetaDataPostMessage))
+  })
+
+  let renderFullscreen = switch paymentMode {
+  | "paymentMethodCollect" =>
+    <LoaderController paymentMode setIntegrateErrorError logger initTimestamp>
+      <PaymentMethodCollectElement integrateError logger />
+    </LoaderController>
+  | "paymentMethodsSDK" =>
+    <LoaderController paymentMode setIntegrateErrorError logger initTimestamp>
+      <PaymentMethodsSDK />
+    </LoaderController>
+  | _ =>
+    switch fullscreenMode {
+    | "paymentloader" => <PaymentLoader />
+    | "clickToPayLearnMore" => <ClickToPayLearnMore />
+    | "plaidSDK" => <PlaidSDKIframe />
+    | "pazeWallet" => <PazeWallet logger />
+    | "fullscreen" =>
+      <div id="fullscreen">
+        <FullScreenDivDriver />
+      </div>
+    | "qrData" => <QRCodeDisplay />
+    | "3dsAuth" => <ThreeDSAuth />
+    | "redsys3ds" => <Redsys3ds />
+    | "3ds" => <ThreeDSMethod />
+    | "voucherData" => <VoucherDisplay />
+    | "3dsRedirectionPopup" => <ThreeDSRedirectionModal />
+    | "preMountLoader" => {
+        let sdkAuthorization = getQueryParamsDictforKey(url.search, "sdkAuthorization")
+        let clientSecret = getQueryParamsDictforKey(url.search, "clientSecret")
+        let sessionId = getQueryParamsDictforKey(url.search, "sessionId")
+        let publishableKey = getQueryParamsDictforKey(url.search, "publishableKey")
+        let endpoint = getQueryParamsDictforKey(url.search, "endpoint")
+        let pmSessionId = getQueryParamsDictforKey(url.search, "pmSessionId")
+        let hyperComponentName =
+          getQueryParamsDictforKey(
+            url.search,
+            "hyperComponentName",
+          )->Types.getHyperComponentNameFromStr
+        let merchantHostname = getQueryParamsDictforKey(url.search, "merchantHostname")
+        let customPodUri = getQueryParamsDictforKey(url.search, "customPodUri")
+        let isTestMode = getQueryParamsDictforKey(url.search, "isTestMode") === "true"
+        let isSdkParamsEnabled =
+          getQueryParamsDictforKey(url.search, "isSdkParamsEnabled") === "true"
+
+        <PreMountLoader
+          publishableKey
+          sessionId
+          sdkAuthorization
+          clientSecret
+          endpoint
+          pmSessionId
+          hyperComponentName
+          merchantHostname
+          customPodUri
+          isTestMode
+          isSdkParamsEnabled
+        />
+      }
+    | "achBankTransfer"
+    | "bacsBankTransfer"
+    | "sepaBankTransfer" =>
+      <BankTransfersPopup transferType=fullscreenMode />
+    | _ =>
+      <LoaderController paymentMode setIntegrateErrorError logger initTimestamp>
+        <Payment paymentMode integrateError logger />
+      </LoaderController>
+    }
+  }
+
+  renderFullscreen
+}

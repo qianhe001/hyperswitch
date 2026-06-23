@@ -1,0 +1,28 @@
+node_modules
+.bsb.lock
+.merlin
+.netlify
+lib/bs
+public/*.LICENSE.txt
+public/app.js
+public/app.css
+.DS_Store
+/dist/
+**/*.bs.js
+.github/CODEOWNERS
+screenshots
+
+# yarn
+.pnp.*
+.yarn/*
+yarn.lock
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+dist
+user_data.sh
+*.pem
+# Sentry Auth Token
+.env.sentry-build-plugin

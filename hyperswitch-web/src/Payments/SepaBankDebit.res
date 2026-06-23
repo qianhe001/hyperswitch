@@ -1,0 +1,86 @@
+open RecoilAtoms
+open Utils
+
+@react.component
+let make = () => {
+  let (requiredFieldsBody, setRequiredFieldsBody) = React.useState(_ => Dict.make())
+
+  let loggerState = Recoil.useRecoilValueFromAtom(loggerAtom)
+  let isManualRetryEnabled = Recoil.useRecoilValueFromAtom(isManualRetryEnabled)
+  let {sdkAuthorization} = Recoil.useRecoilValueFromAtom(keys)
+  let {config, themeObj} = Recoil.useRecoilValueFromAtom(configAtom)
+  let {displaySavedPaymentMethods, layout} = Recoil.useRecoilValueFromAtom(optionAtom)
+  let layoutClass = CardUtils.getLayoutClass(layout)
+  let intent = PaymentHelpers.usePaymentIntent(Some(loggerState), BankDebits)
+  let paymentMethodListValue = Recoil.useRecoilValueFromAtom(PaymentUtils.paymentMethodListValue)
+  let areRequiredFieldsValid = Recoil.useRecoilValueFromAtom(areRequiredFieldsValid)
+  let areRequiredFieldsEmpty = Recoil.useRecoilValueFromAtom(areRequiredFieldsEmpty)
+
+  let pmAuthMapper = React.useMemo1(
+    () =>
+      PmAuthConnectorUtils.findPmAuthAllPMAuthConnectors(paymentMethodListValue.payment_methods),
+    [paymentMethodListValue.payment_methods],
+  )
+
+  let paymentMethodType = "sepa"
+  let paymentMethod = "bank_debit"
+
+  let isVerifyPMAuthConnectorConfigured =
+    displaySavedPaymentMethods && pmAuthMapper->Dict.get(paymentMethodType)->Option.isSome
+
+  UtilityHooks.useHandlePostMessages(
+    ~complete=areRequiredFieldsValid,
+    ~empty=areRequiredFieldsEmpty,
+    ~paymentType="sepa_bank_debit",
+  )
+
+  let submitCallback = React.useCallback((ev: Window.event) => {
+    let json = ev.data->safeParse
+    let confirm = json->getDictFromJson->ConfirmType.itemToObjMapper
+    let body = PaymentBody.dynamicPaymentBody(paymentMethod, paymentMethodType)
+
+    if confirm.doSubmit {
+      if areRequiredFieldsValid && !areRequiredFieldsEmpty {
+        let sepaBody =
+          body
+          ->getJsonFromArrayOfJson
+          ->flattenObject(true)
+          ->mergeTwoFlattenedJsonDicts(requiredFieldsBody)
+          ->getArrayOfTupleFromDict
+        intent(
+          ~bodyArr=sepaBody,
+          ~confirmParam=confirm.confirmParams,
+          ~handleUserError=false,
+          ~manualRetry=isManualRetryEnabled,
+        )
+      } else {
+        postFailedSubmitResponse(~errortype="validation_error", ~message="Please enter all fields")
+      }
+    }
+  }, (
+    isManualRetryEnabled,
+    areRequiredFieldsValid,
+    areRequiredFieldsEmpty,
+    requiredFieldsBody,
+    sdkAuthorization,
+  ))
+
+  useSubmitPaymentData(submitCallback)
+
+  isVerifyPMAuthConnectorConfigured
+    ? <AddBankDetails paymentMethodType />
+    : <div
+        className="flex flex-col animate-slowShow"
+        style={
+          gridGap: {config.appearance.innerLayout === Spaced ? themeObj.spacingGridColumn : ""},
+        }>
+        <RenderIf condition={layoutClass.\"type" === Accordion}>
+          <Space height="0" />
+        </RenderIf>
+        <DynamicFields paymentMethod paymentMethodType setRequiredFieldsBody />
+        <Surcharge paymentMethod paymentMethodType />
+        <Terms paymentMethod paymentMethodType />
+      </div>
+}
+
+let default = make
