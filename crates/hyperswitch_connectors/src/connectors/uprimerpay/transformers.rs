@@ -2,7 +2,7 @@ use common_enums::enums;
 use common_utils::{pii::Email, types::MinorUnit};
 use error_stack::ResultExt;
 use hyperswitch_domain_models::{
-    payment_method_data::{Card, PaymentMethodData},
+    payment_method_data::{Card, PaymentMethodData, WalletData},
     router_data::{AccessToken, ConnectorAuthType},
     router_flow_types::access_token_auth::AccessTokenAuth,
     router_flow_types::refunds::{Execute, RSync},
@@ -131,7 +131,6 @@ pub struct UprimerpayPaymentsRequest {
     notification_url: Option<String>,
     order_time: String,
     payment_method: UprimerpayPaymentMethod,
-    billing: UprimerpayBilling,
     products: Vec<UprimerpayProduct>,
     #[serde(skip_serializing_if = "Option::is_none")]
     shipping: Option<UprimerpayShipping>,
@@ -143,13 +142,22 @@ pub struct UprimerpayPaymentsRequest {
 #[serde(rename_all = "camelCase")]
 pub struct UprimerpayPaymentMethod {
     method_type: UprimerpayPaymentMethodType,
-    card: UprimerpayCard,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    card: Option<UprimerpayCard>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    wechatpay: Option<UprimerpayWechatPay>,
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum UprimerpayPaymentMethodType {
+    #[serde(rename = "CARD")]
     Card,
+    #[serde(rename = "WECHATPAY")]
+    Wechatpay,
+    #[serde(rename = "ALIPAYCN")]
+    Alipaycn,
+    #[serde(rename = "ALIPAYHK")]
+    Alipayhk,
 }
 
 #[derive(Debug, Serialize)]
@@ -162,6 +170,22 @@ pub struct UprimerpayCard {
     first_name: Secret<String>,
     last_name: Secret<String>,
     billing: UprimerpayBilling,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UprimerpayWechatPay {
+    acceptance: UprimerpayWechatPayAcceptance,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    open_id: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    payer_ip: Option<Secret<String>>,
+}
+
+#[derive(Debug, Serialize)]
+pub enum UprimerpayWechatPayAcceptance {
+    #[serde(rename = "WEBQR")]
+    WebQr,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -247,79 +271,147 @@ impl TryFrom<(&UprimerpayRouterData<&PaymentsAuthorizeRouterData>, &Card)>
         value: (&UprimerpayRouterData<&PaymentsAuthorizeRouterData>, &Card),
     ) -> Result<Self, Self::Error> {
         let (item, card) = value;
-        let auth = UprimerpayAuthType::try_from(&item.router_data.connector_auth_type)?;
         let router_data = item.router_data;
         let billing = get_billing(router_data)?;
-        let return_url = router_data.request.get_router_return_url()?;
-        let merchant_order_id = router_data
-            .request
-            .merchant_order_reference_id
-            .clone()
-            .unwrap_or_else(|| router_data.connector_request_reference_id.clone());
-        let request_id = router_data.connector_request_reference_id.clone();
-        let description = router_data
-            .description
-            .clone()
-            .unwrap_or_else(|| "Payment".to_string());
 
         let payment_method = UprimerpayPaymentMethod {
             method_type: UprimerpayPaymentMethodType::Card,
-            card: UprimerpayCard {
+            card: Some(UprimerpayCard {
                 number: card.card_number.clone(),
                 cvv: card.card_cvc.clone(),
                 expiry_month: card.get_card_expiry_month_2_digit()?,
                 expiry_year: card.get_card_expiry_year_2_digit()?,
                 first_name: billing.first_name.clone(),
                 last_name: billing.last_name.clone(),
-                billing: billing.clone(),
-            },
+                billing,
+            }),
+            wechatpay: None,
         };
 
-        Ok(Self {
-            amount: item.amount,
-            app_id: auth.app_id,
-            currency: router_data.request.currency,
-            descriptor: router_data
-                .request
-                .billing_descriptor
-                .as_ref()
-                .and_then(|descriptor| descriptor.name.clone())
-                .map(|name| name.expose()),
-            merchant_order_id,
-            request_id: request_id.clone(),
-            cancel_url: return_url.clone(),
-            success_url: return_url.clone(),
-            failure_url: return_url,
-            notification_url: router_data.request.get_optional_webhook_url(),
-            order_time: get_uprimerpay_timestamp()?,
-            payment_method,
-            billing,
-            products: vec![UprimerpayProduct {
-                code: request_id.clone(),
-                name: description.clone(),
-                quantity: 1,
-                sku: request_id,
-                unit_price: item.amount,
-                total_amount: item.amount,
-            }],
-            shipping: get_shipping(router_data),
-            device_data: get_device_data(&router_data.request.browser_info)?,
-        })
+        build_uprimerpay_payment_request(item, payment_method, true, true)
+    }
+}
+
+impl TryFrom<(&UprimerpayRouterData<&PaymentsAuthorizeRouterData>, &WalletData)>
+    for UprimerpayPaymentsRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        value: (&UprimerpayRouterData<&PaymentsAuthorizeRouterData>, &WalletData),
+    ) -> Result<Self, Self::Error> {
+        let (item, wallet_data) = value;
+
+        let payment_method = match wallet_data {
+            WalletData::AliPayQr(_) | WalletData::AliPayRedirect(_) => UprimerpayPaymentMethod {
+                method_type: UprimerpayPaymentMethodType::Alipaycn,
+                card: None,
+                wechatpay: None,
+            },
+            WalletData::AliPayHkRedirect(_) => UprimerpayPaymentMethod {
+                method_type: UprimerpayPaymentMethodType::Alipayhk,
+                card: None,
+                wechatpay: None,
+            },
+            WalletData::WeChatPayRedirect(_) | WalletData::WeChatPayQr(_) => {
+                UprimerpayPaymentMethod {
+                    method_type: UprimerpayPaymentMethodType::Wechatpay,
+                    card: None,
+                    wechatpay: Some(UprimerpayWechatPay {
+                        acceptance: UprimerpayWechatPayAcceptance::WebQr,
+                        open_id: None,
+                        payer_ip: None,
+                    }),
+                }
+            }
+            _ => {
+                return Err(errors::ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Uprimerpay"),
+                )
+                .into())
+            }
+        };
+
+        build_uprimerpay_payment_request(item, payment_method, false, false)
     }
 }
 
 impl TryFrom<&UprimerpayRouterData<&PaymentsAuthorizeRouterData>> for UprimerpayPaymentsRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: &UprimerpayRouterData<&PaymentsAuthorizeRouterData>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: &UprimerpayRouterData<&PaymentsAuthorizeRouterData>,
+    ) -> Result<Self, Self::Error> {
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(card) => Self::try_from((item, &card)),
+            PaymentMethodData::Wallet(wallet_data) => Self::try_from((item, &wallet_data)),
             _ => Err(errors::ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("Uprimerpay"),
             )
             .into()),
         }
     }
+}
+
+fn build_uprimerpay_payment_request(
+    item: &UprimerpayRouterData<&PaymentsAuthorizeRouterData>,
+    payment_method: UprimerpayPaymentMethod,
+    include_shipping: bool,
+    include_device_data: bool,
+) -> Result<UprimerpayPaymentsRequest, error_stack::Report<errors::ConnectorError>> {
+    let auth = UprimerpayAuthType::try_from(&item.router_data.connector_auth_type)?;
+    let router_data = item.router_data;
+    let return_url = router_data.request.get_router_return_url()?;
+    let merchant_order_id = router_data
+        .request
+        .merchant_order_reference_id
+        .clone()
+        .unwrap_or_else(|| router_data.connector_request_reference_id.clone());
+    let request_id = router_data.connector_request_reference_id.clone();
+    let description = router_data
+        .description
+        .clone()
+        .unwrap_or_else(|| "Payment".to_string());
+    let shipping = if include_shipping {
+        get_shipping(router_data)
+    } else {
+        None
+    };
+    let device_data = if include_device_data {
+        get_device_data(&router_data.request.browser_info)?
+    } else {
+        None
+    };
+
+    Ok(UprimerpayPaymentsRequest {
+        amount: item.amount,
+        app_id: auth.app_id,
+        currency: router_data.request.currency,
+        descriptor: router_data
+            .request
+            .billing_descriptor
+            .as_ref()
+            .and_then(|descriptor| descriptor.name.clone())
+            .map(|name| name.expose()),
+        merchant_order_id,
+        request_id: request_id.clone(),
+        cancel_url: return_url.clone(),
+        success_url: return_url.clone(),
+        failure_url: return_url,
+        notification_url: router_data.request.get_optional_webhook_url(),
+        order_time: get_uprimerpay_timestamp()?,
+        payment_method,
+        products: vec![UprimerpayProduct {
+            code: request_id.clone(),
+            name: description,
+            quantity: 1,
+            sku: request_id,
+            unit_price: item.amount,
+            total_amount: item.amount,
+        }],
+        shipping,
+        device_data,
+    })
 }
 
 fn get_billing(

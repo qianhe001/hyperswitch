@@ -5324,6 +5324,12 @@ merchant_secret="Source verification key"
   payment_method_type = "Mastercard"
 [[uprimerpay.debit]]
   payment_method_type = "Visa"
+[[uprimerpay.wallet]]
+  payment_method_type = "ali_pay"
+[[uprimerpay.wallet]]
+  payment_method_type = "ali_pay_hk"
+[[uprimerpay.wallet]]
+  payment_method_type = "we_chat_pay"
 [uprimerpay.connector_auth.SignatureKey]
 api_key="App ID"
 key1="Access Code"

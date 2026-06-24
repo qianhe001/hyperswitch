@@ -882,12 +882,29 @@ static UPRIMERPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
             );
         }
 
+        for payment_method_type in [
+            enums::PaymentMethodType::AliPay,
+            enums::PaymentMethodType::AliPayHk,
+            enums::PaymentMethodType::WeChatPay,
+        ] {
+            supported_payment_methods.add(
+                enums::PaymentMethod::Wallet,
+                payment_method_type,
+                PaymentMethodDetails {
+                    mandates: enums::FeatureStatus::NotSupported,
+                    refunds: enums::FeatureStatus::Supported,
+                    supported_capture_methods: supported_capture_methods.clone(),
+                    specific_features: None,
+                },
+            );
+        }
+
         supported_payment_methods
     });
 
 static UPRIMERPAY_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     display_name: "UprimerPay",
-    description: "UprimerPay provides acquiring and card payment processing APIs.",
+    description: "UprimerPay provides acquiring, card, and wallet payment processing APIs.",
     connector_type: enums::HyperswitchConnectorCategory::PaymentGateway,
     integration_status: enums::ConnectorIntegrationStatus::Sandbox,
 };

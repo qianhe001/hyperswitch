@@ -738,7 +738,7 @@ let payconexInfo = {
 }
 
 let uprimerpayInfo = {
-  description: "UprimerPay is a payment processor that enables merchants to accept secure online card payments with authorization, synchronization, and refund support.",
+  description: "UprimerPay is a payment processor that enables merchants to accept secure online card and wallet payments with synchronization and refund support.",
 }
 
 let signifydInfo = {
